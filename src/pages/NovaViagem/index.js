@@ -1,14 +1,13 @@
+// src/pages/NovaViagem/index.js
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaTrash } from 'react-icons/fa';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 import { Header } from '../../components/Header';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { calculators } from '../../utils/calculators';
+import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
+import { FaTrash, FaPlus, FaGasPump, FaWrench, FaRoad, FaGift, FaCalculator } from 'react-icons/fa';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -16,120 +15,144 @@ const Container = styled.div`
 `;
 
 const Content = styled.main`
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: ${props => props.theme.spacing.xl};
 `;
 
-const Section = styled.section`
+const PageTitle = styled.h1`
+  font-size: ${props => props.theme.fontSizes.xxlarge};
+  color: ${props => props.theme.colors.primary};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  font-weight: 700;
+  border-left: 5px solid ${props => props.theme.colors.primary};
+  padding-left: ${props => props.theme.spacing.md};
+`;
+
+const FormSection = styled.section`
   background-color: ${props => props.theme.colors.white};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  padding: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.large};
+  padding: ${props => props.theme.spacing.xl};
   margin-bottom: ${props => props.theme.spacing.xl};
   box-shadow: ${props => props.theme.shadows.small};
 `;
 
-const SectionTitle = styled.h3`
+const SectionTitle = styled.h2`
+  font-size: ${props => props.theme.fontSizes.large};
   color: ${props => props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.lg};
-  font-size: ${props => props.theme.fontSizes.large};
-  border-bottom: 2px solid ${props => props.theme.colors.primary}40;
   padding-bottom: ${props => props.theme.spacing.sm};
+  border-bottom: 2px solid ${props => props.theme.colors.primary}40;
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
 `;
 
-const Grid = styled.div`
+const FormRow = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+`;
+
+const HalfRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.md};
+`;
+
+const ValueDisplay = styled.div`
+  background-color: ${props => props.theme.colors.gray};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.small};
+  font-size: ${props => props.theme.fontSizes.large};
+  font-weight: 600;
+  color: ${props => props.theme.colors.primary};
+  text-align: right;
+  margin-top: ${props => props.theme.spacing.sm};
+`;
+
+const ValueLabel = styled.div`
+  font-size: ${props => props.theme.fontSizes.small};
+  color: ${props => props.theme.colors.darkGray};
+  margin-bottom: ${props => props.theme.spacing.xs};
+`;
+
+const TableContainer = styled.div`
+  overflow-x: auto;
+  margin: ${props => props.theme.spacing.md} 0;
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: ${props => props.theme.spacing.md};
+  
+  th, td {
+    padding: ${props => props.theme.spacing.sm};
+    text-align: left;
+    border-bottom: 1px solid ${props => props.theme.colors.gray};
+  }
+  
+  th {
+    background-color: ${props => props.theme.colors.background};
+    font-weight: 600;
+    color: ${props => props.theme.colors.primary};
+  }
+  
+  td {
+    input, select {
+      width: 100%;
+      padding: ${props => props.theme.spacing.xs};
+      border: 1px solid ${props => props.theme.colors.gray};
+      border-radius: ${props => props.theme.borderRadius.small};
+      
+      &:focus {
+        outline: none;
+        border-color: ${props => props.theme.colors.primary};
+      }
+    }
+  }
 `;
 
-const Th = styled.th`
-  text-align: left;
-  padding: ${props => props.theme.spacing.sm};
-  background-color: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.darkGray};
-  font-weight: 600;
-`;
-
-const Td = styled.td`
-  padding: ${props => props.theme.spacing.sm};
-  border-bottom: 1px solid ${props => props.theme.colors.gray};
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.error};
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: ${props => props.theme.spacing.xs};
+  
+  &:hover {
+    opacity: 0.7;
+  }
 `;
 
 const AddButton = styled.button`
-  background-color: ${props => props.theme.colors.primary};
-  color: ${props => props.theme.colors.white};
-  border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: ${props => props.theme.borderRadius.round};
+  background: none;
+  border: 2px dashed ${props => props.theme.colors.primary};
+  color: ${props => props.theme.colors.primary};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.small};
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  margin-bottom: ${props => props.theme.spacing.md};
-
+  gap: ${props => props.theme.spacing.xs};
+  margin-top: ${props => props.theme.spacing.sm};
+  
   &:hover {
-    background-color: ${props => props.theme.colors.primaryDark};
+    background-color: ${props => props.theme.colors.primary}10;
   }
 `;
 
-const DeleteButton = styled.button`
-  background-color: ${props => props.theme.colors.error};
-  color: ${props => props.theme.colors.white};
-  border: none;
-  width: 25px;
-  height: 25px;
-  border-radius: ${props => props.theme.borderRadius.round};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-
-  &:hover {
-    opacity: 0.8;
-  }
-`;
-
-const TotalContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: ${props => props.theme.spacing.lg};
+const TotalRow = styled.div`
+  text-align: right;
+  font-size: ${props => props.theme.fontSizes.large};
+  font-weight: 600;
   margin-top: ${props => props.theme.spacing.md};
   padding-top: ${props => props.theme.spacing.md};
   border-top: 2px solid ${props => props.theme.colors.gray};
-`;
-
-const TotalLabel = styled.span`
-  font-weight: 600;
-  color: ${props => props.theme.colors.darkGray};
-`;
-
-const TotalValue = styled.span`
-  font-size: ${props => props.theme.fontSizes.large};
   color: ${props => props.theme.colors.primary};
-  font-weight: 700;
-`;
-
-const ResumoGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${props => props.theme.spacing.xl};
-`;
-
-const ResumoItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${props => props.theme.spacing.sm} 0;
-  border-bottom: 1px solid ${props => props.theme.colors.gray};
 `;
 
 const RadioGroup = styled.div`
@@ -145,532 +168,581 @@ const RadioLabel = styled.label`
   cursor: pointer;
 `;
 
+const SummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${props => props.theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.md};
+`;
+
+const SummaryCard = styled.div`
+  background-color: ${props => props.theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  text-align: center;
+`;
+
+const SummaryValue = styled.div`
+  font-size: ${props => props.theme.fontSizes.xlarge};
+  font-weight: 700;
+  color: ${props => props.theme.colors.primary};
+  margin-top: ${props => props.theme.spacing.xs};
+`;
+
+const SummaryLabel = styled.div`
+  font-size: ${props => props.theme.fontSizes.small};
+  color: ${props => props.theme.colors.darkGray};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  justify-content: flex-end;
+  margin-top: ${props => props.theme.spacing.xl};
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border: 2px solid ${props => props.theme.colors.gray};
+  border-radius: ${props => props.theme.borderRadius.small};
+  font-size: ${props => props.theme.fontSizes.medium};
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
+`;
+
+// Dados simulados de cidades
+const cidadesMock = [
+  { id: 1, cidade: 'São Paulo', estado: 'SP' },
+  { id: 2, cidade: 'Rio de Janeiro', estado: 'RJ' },
+  { id: 3, cidade: 'Belo Horizonte', estado: 'MG' },
+  { id: 4, cidade: 'Curitiba', estado: 'PR' },
+  { id: 5, cidade: 'Porto Alegre', estado: 'RS' },
+  { id: 6, cidade: 'Brasília', estado: 'DF' },
+  { id: 7, cidade: 'Salvador', estado: 'BA' },
+  { id: 8, cidade: 'Fortaleza', estado: 'CE' },
+  { id: 9, cidade: 'Recife', estado: 'PE' },
+  { id: 10, cidade: 'Manaus', estado: 'AM' },
+];
+
 export const NovaViagem = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [cidades, setCidades] = useState(cidadesMock);
+  
+  // Dados básicos da viagem
   const [formData, setFormData] = useState({
-    dataInicio: new Date(),
-    dataFim: new Date(),
-    kmSaida: 0,
-    kmChegada: 0,
+    dataInicio: '',
+    dataFim: '',
+    kmSaida: '',
+    kmChegada: '',
     cidadeSaida: '',
-    estadoSaida: '',
     cidadeChegada: '',
-    estadoChegada: '',
-    pesoSaida: 0,
-    pesoChegada: 0,
-    precoTonelada: 0
+    pesoSaida: '',
+    pesoChegada: '',
+    precoTonelada: '',
   });
-
-  const [abastecimentos, setAbastecimentos] = useState([]);
-  const [oficinas, setOficinas] = useState([]);
-  const [pedagios, setPedagios] = useState([]);
-  const [outros, setOutros] = useState({
-    faltaMercadoria: false,
-    kilosFalta: 0,
-    precoFalta: 0,
-    gorjetas: []
-  });
-
-  const [cidades, setCidades] = useState([]);
-
-  useEffect(() => {
-    carregarCidades();
-  }, []);
-
-  const carregarCidades = async () => {
-    try {
-      const response = await api.get('/cidades');
-      setCidades(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar cidades:', error);
+  
+  // Abastecimentos
+  const [abastecimentos, setAbastecimentos] = useState([
+    { id: Date.now(), data: '', km: '', posto: '', litros: '', valorLitros: '', total: 0 }
+  ]);
+  
+  // Oficinas
+  const [oficinas, setOficinas] = useState([
+    { id: Date.now(), data: '', km: '', tipo: '', preco: '' }
+  ]);
+  
+  // Pedagios
+  const [pedagios, setPedagios] = useState([
+    { id: Date.now(), valor: '' }
+  ]);
+  
+  // Outros gastos
+  const [faltaMercadoria, setFaltaMercadoria] = useState('nao');
+  const [kilosFalta, setKilosFalta] = useState('');
+  const [precoFalta, setPrecoFalta] = useState('');
+  const [gorjetas, setGorjetas] = useState([
+    { id: Date.now(), valor: '' }
+  ]);
+  
+  // Cálculos
+  const precoTotal = (formData.pesoSaida * formData.precoTonelada) || 0;
+  const adiantamento = precoTotal * 0.8;
+  const ordemPagamento = precoTotal * 0.8;
+  
+  const totalAbastecimentos = abastecimentos.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const totalOficinas = oficinas.reduce((sum, item) => sum + (Number(item.preco) || 0), 0);
+  const totalPedagios = pedagios.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+  const totalFaltaMercadoria = faltaMercadoria === 'sim' ? (kilosFalta * precoFalta) : 0;
+  const totalGorjetas = gorjetas.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+  
+  const totalGastos = totalAbastecimentos + totalOficinas + totalPedagios + totalFaltaMercadoria + totalGorjetas;
+  const comissao = (precoTotal - totalGastos) * 0.1;
+  const totalLiquido = precoTotal - totalGastos - comissao;
+  
+  // Handlers
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const handleAddAbastecimento = () => {
+    setAbastecimentos(prev => [...prev, { id: Date.now(), data: '', km: '', posto: '', litros: '', valorLitros: '', total: 0 }]);
+  };
+  
+  const handleAbastecimentoChange = (id, field, value) => {
+    setAbastecimentos(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: value };
+        if (field === 'litros' || field === 'valorLitros') {
+          updated.total = (Number(updated.litros) || 0) * (Number(updated.valorLitros) || 0);
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+  
+  const handleRemoveAbastecimento = (id) => {
+    if (abastecimentos.length > 1) {
+      setAbastecimentos(prev => prev.filter(item => item.id !== id));
     }
   };
-
-  // Cálculos automáticos
-  const precoTotal = calculators.calcularPrecoTotal(
-    formData.pesoSaida, 
-    formData.precoTonelada
-  );
   
-  const adiantamento = calculators.calcularAdiantamento(precoTotal);
-  
-  const totalAbastecimentos = calculators.somarValores(
-    abastecimentos.map(a => a.total)
-  );
-  
-  const totalOficinas = calculators.somarValores(
-    oficinas.map(o => o.preco)
-  );
-  
-  const totalPedagios = calculators.somarValores(pedagios);
-  
-  const totalGorjetas = calculators.somarValores(outros.gorjetas);
-  
-  const totalFaltaMercadoria = outros.faltaMercadoria 
-    ? outros.kilosFalta * outros.precoFalta 
-    : 0;
-  
-  const totalGastos = calculators.calcularTotalGastos({
-    abastecimentos: totalAbastecimentos,
-    oficinas: totalOficinas,
-    pedagios: totalPedagios,
-    faltaMercadoria: totalFaltaMercadoria,
-    gorjetas: totalGorjetas
-  });
-  
-  const totalLiquido = calculators.calcularTotalLiquido(
-    precoTotal,
-    totalGastos
-  );
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleAddOficina = () => {
+    setOficinas(prev => [...prev, { id: Date.now(), data: '', km: '', tipo: '', preco: '' }]);
   };
-
-  const adicionarAbastecimento = () => {
-    setAbastecimentos([
-      ...abastecimentos,
-      {
-        id: Date.now(),
-        data: new Date(),
-        km: 0,
-        posto: '',
-        litros: 0,
-        valorLitros: 0,
-        total: 0
-      }
-    ]);
+  
+  const handleOficinaChange = (id, field, value) => {
+    setOficinas(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
-
-  const atualizarAbastecimento = (id, campo, valor) => {
-    setAbastecimentos(prev => 
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, [campo]: valor };
-          if (campo === 'litros' || campo === 'valorLitros') {
-            updated.total = updated.litros * updated.valorLitros;
-          }
-          return updated;
-        }
-        return item;
-      })
-    );
+  
+  const handleRemoveOficina = (id) => {
+    if (oficinas.length > 1) {
+      setOficinas(prev => prev.filter(item => item.id !== id));
+    }
   };
-
-  const removerAbastecimento = (id) => {
-    setAbastecimentos(prev => prev.filter(item => item.id !== id));
+  
+  const handleAddPedagio = () => {
+    setPedagios(prev => [...prev, { id: Date.now(), valor: '' }]);
   };
-
-  const adicionarOficina = () => {
-    setOficinas([
-      ...oficinas,
-      {
-        id: Date.now(),
-        data: new Date(),
-        km: 0,
-        tipo: 'borracharia',
-        preco: 0
-      }
-    ]);
+  
+  const handlePedagioChange = (id, value) => {
+    setPedagios(prev => prev.map(item => item.id === id ? { ...item, valor: value } : item));
   };
-
-  const adicionarPedagio = () => {
-    setPedagios([...pedagios, { id: Date.now(), valor: 0 }]);
+  
+  const handleRemovePedagio = (id) => {
+    if (pedagios.length > 1) {
+      setPedagios(prev => prev.filter(item => item.id !== id));
+    }
   };
-
-  const adicionarGorjeta = () => {
-    setOutros(prev => ({
-      ...prev,
-      gorjetas: [...prev.gorjetas, { id: Date.now(), valor: 0 }]
-    }));
+  
+  const handleAddGorjeta = () => {
+    setGorjetas(prev => [...prev, { id: Date.now(), valor: '' }]);
   };
-
-  const finalizarViagem = async () => {
+  
+  const handleGorjetaChange = (id, value) => {
+    setGorjetas(prev => prev.map(item => item.id === id ? { ...item, valor: value } : item));
+  };
+  
+  const handleRemoveGorjeta = (id) => {
+    if (gorjetas.length > 1) {
+      setGorjetas(prev => prev.filter(item => item.id !== id));
+    }
+  };
+  
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+  
+  const handleSubmit = async () => {
+    setLoading(true);
+    
     try {
       const viagemData = {
         ...formData,
-        abastecimentos,
-        oficinas,
-        pedagios,
-        outros,
-        resumo: {
-          totalBruto: precoTotal,
-          totalGastos,
-          totalLiquido
-        }
+        abastecimentos: abastecimentos.filter(a => a.data && a.litros),
+        oficinas: oficinas.filter(o => o.data && o.preco),
+        pedagios: pedagios.filter(p => p.valor),
+        gorjetas: gorjetas.filter(g => g.valor),
+        faltaMercadoria: faltaMercadoria === 'sim' ? { kilosFalta, precoFalta, total: totalFaltaMercadoria } : null,
+        precoTotal,
+        adiantamento,
+        ordemPagamento,
+        totalGastos,
+        comissao,
+        totalLiquido
       };
-
-      await api.post('/viagens', viagemData);
+      
+      // Salvar localmente para simular
+      const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
+      const novaViagem = {
+        id: Date.now(),
+        ...viagemData,
+        data_entrada: formData.dataInicio,
+        data_chegada: formData.dataFim,
+        km_entrada: formData.kmChegada,
+        cidade_saida: cidades.find(c => c.id == formData.cidadeSaida)?.cidade || 'Cidade',
+        cidade_chegada: cidades.find(c => c.id == formData.cidadeChegada)?.cidade || 'Cidade',
+        estado_saida: cidades.find(c => c.id == formData.cidadeSaida)?.estado || 'UF',
+        estado_chegada: cidades.find(c => c.id == formData.cidadeChegada)?.estado || 'UF'
+      };
+      viagensSalvas.push(novaViagem);
+      localStorage.setItem('@App:viagens', JSON.stringify(viagensSalvas));
+      
+      alert('Viagem salva com sucesso!');
       navigate('/home');
     } catch (error) {
       console.error('Erro ao salvar viagem:', error);
+      alert('Erro ao salvar viagem. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   return (
     <Container>
       <Header />
       
       <Content>
-        {/* Seção 1: Informações Básicas */}
-        <Section>
-          <SectionTitle>Informações da Viagem</SectionTitle>
-          <Grid>
-            <div>
-              <label>Data de Início</label>
-              <DatePicker
-                selected={formData.dataInicio}
-                onChange={date => setFormData(prev => ({ ...prev, dataInicio: date }))}
-                dateFormat="dd/MM/yyyy"
-              />
-            </div>
-            
-            <div>
-              <label>Data de Fim</label>
-              <DatePicker
-                selected={formData.dataFim}
-                onChange={date => setFormData(prev => ({ ...prev, dataFim: date }))}
-                dateFormat="dd/MM/yyyy"
-              />
-            </div>
-
+        <PageTitle>Cadastro de Viagem</PageTitle>
+        
+        {/* Dados da Viagem */}
+        <FormSection>
+          <SectionTitle>
+            <FaCalculator /> Dados da Viagem
+          </SectionTitle>
+          
+          <HalfRow>
             <Input
-              label="KM Saída"
+              label="Data de Início"
+              type="date"
+              value={formData.dataInicio}
+              onChange={(e) => handleInputChange('dataInicio', e.target.value)}
+            />
+            <Input
+              label="Data de Fim"
+              type="date"
+              value={formData.dataFim}
+              onChange={(e) => handleInputChange('dataFim', e.target.value)}
+            />
+          </HalfRow>
+          
+          <HalfRow>
+            <Input
+              label="KM ao Sair"
               type="number"
-              name="kmSaida"
+              placeholder="0"
               value={formData.kmSaida}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange('kmSaida', e.target.value)}
             />
-
             <Input
-              label="KM Chegada"
+              label="KM ao Fim"
               type="number"
-              name="kmChegada"
+              placeholder="0"
               value={formData.kmChegada}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange('kmChegada', e.target.value)}
             />
-
+          </HalfRow>
+          
+          <HalfRow>
             <div>
-              <label>Cidade de Saída</label>
-              <select
-                name="cidadeSaida"
+              <ValueLabel>Cidade de Início</ValueLabel>
+              <Select
                 value={formData.cidadeSaida}
-                onChange={handleInputChange}
+                onChange={(e) => handleInputChange('cidadeSaida', e.target.value)}
               >
-                <option value="">Selecione</option>
+                <option value="">Selecione a cidade</option>
                 {cidades.map(cidade => (
                   <option key={cidade.id} value={cidade.id}>
-                    {cidade.cidade} - {cidade.estado_sigla}
+                    {cidade.cidade} - {cidade.estado}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
-
-            <Input
-              label="Estado Saída"
-              name="estadoSaida"
-              value={formData.estadoSaida}
-              onChange={handleInputChange}
-              maxLength={2}
-            />
-
             <div>
-              <label>Cidade de Chegada</label>
-              <select
-                name="cidadeChegada"
+              <ValueLabel>Estado de Início</ValueLabel>
+              <Input
+                value={cidades.find(c => c.id == formData.cidadeSaida)?.estado || ''}
+                disabled
+                placeholder="UF"
+              />
+            </div>
+          </HalfRow>
+          
+          <HalfRow>
+            <div>
+              <ValueLabel>Cidade de Fim</ValueLabel>
+              <Select
                 value={formData.cidadeChegada}
-                onChange={handleInputChange}
+                onChange={(e) => handleInputChange('cidadeChegada', e.target.value)}
               >
-                <option value="">Selecione</option>
+                <option value="">Selecione a cidade</option>
                 {cidades.map(cidade => (
                   <option key={cidade.id} value={cidade.id}>
-                    {cidade.cidade} - {cidade.estado_sigla}
+                    {cidade.cidade} - {cidade.estado}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
-
+            <div>
+              <ValueLabel>Estado de Fim</ValueLabel>
+              <Input
+                value={cidades.find(c => c.id == formData.cidadeChegada)?.estado || ''}
+                disabled
+                placeholder="UF"
+              />
+            </div>
+          </HalfRow>
+          
+          <HalfRow>
             <Input
-              label="Estado Chegada"
-              name="estadoChegada"
-              value={formData.estadoChegada}
-              onChange={handleInputChange}
-              maxLength={2}
-            />
-
-            <Input
-              label="Peso Saída (toneladas)"
+              label="Peso no Início (kg)"
               type="number"
-              name="pesoSaida"
+              placeholder="0"
               value={formData.pesoSaida}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange('pesoSaida', e.target.value)}
             />
-
             <Input
-              label="Peso Chegada (toneladas)"
+              label="Peso no Fim (kg)"
               type="number"
-              name="pesoChegada"
+              placeholder="0"
               value={formData.pesoChegada}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange('pesoChegada', e.target.value)}
             />
-
+          </HalfRow>
+          
+          <FormRow>
             <Input
-              label="Preço por Tonelada (R$)"
+              label="Preço da Tonelada (R$)"
               type="number"
-              name="precoTonelada"
+              step="0.01"
+              placeholder="0,00"
               value={formData.precoTonelada}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange('precoTonelada', e.target.value)}
             />
-          </Grid>
-
-          <TotalContainer>
-            <TotalLabel>Preço Total:</TotalLabel>
-            <TotalValue>R$ {precoTotal.toFixed(2)}</TotalValue>
-          </TotalContainer>
-
-          <TotalContainer>
-            <TotalLabel>Adiantamento (80%):</TotalLabel>
-            <TotalValue>R$ {adiantamento.toFixed(2)}</TotalValue>
-          </TotalContainer>
-
-          <TotalContainer>
-            <TotalLabel>Ordem de Pagamento:</TotalLabel>
-            <TotalValue>R$ {adiantamento.toFixed(2)}</TotalValue>
-          </TotalContainer>
-        </Section>
-
-        {/* Seção 2: Abastecimento */}
-        <Section>
-          <SectionTitle>Abastecimentos</SectionTitle>
+            <div>
+              <ValueLabel>Preço Total (R$)</ValueLabel>
+              <ValueDisplay>{formatCurrency(precoTotal)}</ValueDisplay>
+            </div>
+          </FormRow>
           
-          <AddButton onClick={adicionarAbastecimento}>
-            <FaPlus />
-          </AddButton>
-
-          <Table>
-            <thead>
-              <tr>
-                <Th>Data</Th>
-                <Th>KM</Th>
-                <Th>Posto</Th>
-                <Th>Litros</Th>
-                <Th>R$/Litro</Th>
-                <Th>Total</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {abastecimentos.map(item => (
-                <tr key={item.id}>
-                  <Td>
-                    <DatePicker
-                      selected={item.data}
-                      onChange={date => atualizarAbastecimento(item.id, 'data', date)}
-                      dateFormat="dd/MM/yyyy"
-                    />
-                  </Td>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.km}
-                      onChange={e => atualizarAbastecimento(item.id, 'km', parseFloat(e.target.value))}
-                    />
-                  </Td>
-                  <Td>
-                    <input
-                      type="text"
-                      value={item.posto}
-                      onChange={e => atualizarAbastecimento(item.id, 'posto', e.target.value)}
-                    />
-                  </Td>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.litros}
-                      onChange={e => atualizarAbastecimento(item.id, 'litros', parseFloat(e.target.value))}
-                    />
-                  </Td>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.valorLitros}
-                      onChange={e => atualizarAbastecimento(item.id, 'valorLitros', parseFloat(e.target.value))}
-                    />
-                  </Td>
-                  <Td>R$ {item.total.toFixed(2)}</Td>
-                  <Td>
-                    <DeleteButton onClick={() => removerAbastecimento(item.id)}>
-                      <FaTrash />
-                    </DeleteButton>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-
-          <TotalContainer>
-            <TotalLabel>Total Abastecimentos:</TotalLabel>
-            <TotalValue>R$ {totalAbastecimentos.toFixed(2)}</TotalValue>
-          </TotalContainer>
-        </Section>
-
-        {/* Seção 3: Oficina */}
-        <Section>
-          <SectionTitle>Oficina</SectionTitle>
+          <FormRow>
+            <div>
+              <ValueLabel>Valor do Adiantamento (R$)</ValueLabel>
+              <ValueDisplay>{formatCurrency(adiantamento)}</ValueDisplay>
+            </div>
+            <div>
+              <ValueLabel>Ordem de Pagamento</ValueLabel>
+              <ValueDisplay>{formatCurrency(ordemPagamento)}</ValueDisplay>
+            </div>
+          </FormRow>
+        </FormSection>
+        
+        {/* Abastecimento */}
+        <FormSection>
+          <SectionTitle>
+            <FaGasPump /> Abastecimento
+          </SectionTitle>
           
-          <AddButton onClick={adicionarOficina}>
-            <FaPlus />
-          </AddButton>
-
-          <Table>
-            <thead>
-              <tr>
-                <Th>Data</Th>
-                <Th>KM</Th>
-                <Th>Tipo</Th>
-                <Th>Valor</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {oficinas.map(item => (
-                <tr key={item.id}>
-                  <Td>
-                    <DatePicker
-                      selected={item.data}
-                      onChange={date => {
-                        const updated = oficinas.map(o => 
-                          o.id === item.id ? { ...o, data: date } : o
-                        );
-                        setOficinas(updated);
-                      }}
-                      dateFormat="dd/MM/yyyy"
-                    />
-                  </Td>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.km}
-                      onChange={e => {
-                        const updated = oficinas.map(o => 
-                          o.id === item.id ? { ...o, km: parseFloat(e.target.value) } : o
-                        );
-                        setOficinas(updated);
-                      }}
-                    />
-                  </Td>
-                  <Td>
-                    <select
-                      value={item.tipo}
-                      onChange={e => {
-                        const updated = oficinas.map(o => 
-                          o.id === item.id ? { ...o, tipo: e.target.value } : o
-                        );
-                        setOficinas(updated);
-                      }}
-                    >
-                      <option value="borracharia">Borracharia</option>
-                      <option value="pecas">Peças</option>
-                      <option value="mecanica">Mecânica</option>
-                      <option value="eletrica">Elétrica</option>
-                      <option value="funilaria">Funilaria</option>
-                      <option value="revisao">Revisão</option>
-                    </select>
-                  </Td>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.preco}
-                      onChange={e => {
-                        const updated = oficinas.map(o => 
-                          o.id === item.id ? { ...o, preco: parseFloat(e.target.value) } : o
-                        );
-                        setOficinas(updated);
-                      }}
-                    />
-                  </Td>
-                  <Td>
-                    <DeleteButton onClick={() => {
-                      setOficinas(oficinas.filter(o => o.id !== item.id));
-                    }}>
-                      <FaTrash />
-                    </DeleteButton>
-                  </Td>
+          <TableContainer>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>KM</th>
+                  <th>Posto</th>
+                  <th>Litros</th>
+                  <th>Valor/Litro (R$)</th>
+                  <th>Valor Total (R$)</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-
-          <TotalContainer>
-            <TotalLabel>Total Oficina:</TotalLabel>
-            <TotalValue>R$ {totalOficinas.toFixed(2)}</TotalValue>
-          </TotalContainer>
-        </Section>
-
-        {/* Seção 4: Pedágio */}
-        <Section>
-          <SectionTitle>Pedágios</SectionTitle>
+              </thead>
+              <tbody>
+                {abastecimentos.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <input
+                        type="date"
+                        value={item.data}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'data', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={item.km}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'km', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        placeholder="Posto"
+                        value={item.posto}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'posto', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        value={item.litros}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'litros', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        value={item.valorLitros}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'valorLitros', e.target.value)}
+                      />
+                    </td>
+                    <td>{formatCurrency(item.total)}</td>
+                    <td>
+                      <ActionButton onClick={() => handleRemoveAbastecimento(item.id)}>
+                        <FaTrash />
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableContainer>
           
-          <AddButton onClick={adicionarPedagio}>
-            <FaPlus />
+          <AddButton onClick={handleAddAbastecimento}>
+            <FaPlus /> Adicionar linha
           </AddButton>
-
-          <Table>
-            <thead>
-              <tr>
-                <Th>Valor do Pedágio (R$)</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {pedagios.map((item, index) => (
-                <tr key={item.id}>
-                  <Td>
-                    <input
-                      type="number"
-                      value={item.valor}
-                      onChange={e => {
-                        const updated = [...pedagios];
-                        updated[index].valor = parseFloat(e.target.value);
-                        setPedagios(updated);
-                      }}
-                    />
-                  </Td>
-                  <Td>
-                    <DeleteButton onClick={() => {
-                      setPedagios(pedagios.filter(p => p.id !== item.id));
-                    }}>
-                      <FaTrash />
-                    </DeleteButton>
-                  </Td>
+          
+          <TotalRow>Total: {formatCurrency(totalAbastecimentos)}</TotalRow>
+        </FormSection>
+        
+        {/* Oficina */}
+        <FormSection>
+          <SectionTitle>
+            <FaWrench /> Oficina
+          </SectionTitle>
+          
+          <TableContainer>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>KM</th>
+                  <th>Tipo</th>
+                  <th>Valor (R$)</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
-
-          <TotalContainer>
-            <TotalLabel>Total Pedágios:</TotalLabel>
-            <TotalValue>R$ {totalPedagios.toFixed(2)}</TotalValue>
-          </TotalContainer>
-        </Section>
-
-        {/* Seção 5: Outros */}
-        <Section>
-          <SectionTitle>Outros</SectionTitle>
-
+              </thead>
+              <tbody>
+                {oficinas.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <input
+                        type="date"
+                        value={item.data}
+                        onChange={(e) => handleOficinaChange(item.id, 'data', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={item.km}
+                        onChange={(e) => handleOficinaChange(item.id, 'km', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <select value={item.tipo} onChange={(e) => handleOficinaChange(item.id, 'tipo', e.target.value)}>
+                        <option value="">Selecione</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="pneu">Pneu</option>
+                        <option value="oleo">Troca de Óleo</option>
+                        <option value="motor">Motor</option>
+                        <option value="outros">Outros</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={item.preco}
+                        onChange={(e) => handleOficinaChange(item.id, 'preco', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <ActionButton onClick={() => handleRemoveOficina(item.id)}>
+                        <FaTrash />
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableContainer>
+          
+          <AddButton onClick={handleAddOficina}>
+            <FaPlus /> Adicionar linha
+          </AddButton>
+          
+          <TotalRow>Total Pago: {formatCurrency(totalOficinas)}</TotalRow>
+        </FormSection>
+        
+        {/* Pedágio */}
+        <FormSection>
+          <SectionTitle>
+            <FaRoad /> Pedágio
+          </SectionTitle>
+          
+          {pedagios.map(item => (
+            <div key={item.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+              <Input
+                label="Valor do pedágio"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={item.valor}
+                onChange={(e) => handlePedagioChange(item.id, e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <ActionButton onClick={() => handleRemovePedagio(item.id)} style={{ marginTop: '24px' }}>
+                <FaTrash />
+              </ActionButton>
+            </div>
+          ))}
+          
+          <AddButton onClick={handleAddPedagio}>
+            <FaPlus /> Adicionar valor
+          </AddButton>
+          
+          <TotalRow>Total Pago: {formatCurrency(totalPedagios)}</TotalRow>
+        </FormSection>
+        
+        {/* Outros */}
+        <FormSection>
+          <SectionTitle>
+            <FaGift /> Outros
+          </SectionTitle>
+          
           <div>
-            <p>Houve falta de mercadoria?</p>
+            <ValueLabel>Houve falta de mercadoria?</ValueLabel>
             <RadioGroup>
               <RadioLabel>
                 <input
                   type="radio"
                   name="faltaMercadoria"
-                  checked={outros.faltaMercadoria === true}
-                  onChange={() => setOutros(prev => ({ ...prev, faltaMercadoria: true }))}
+                  value="sim"
+                  checked={faltaMercadoria === 'sim'}
+                  onChange={(e) => setFaltaMercadoria(e.target.value)}
                 />
                 Sim
               </RadioLabel>
@@ -678,136 +750,94 @@ export const NovaViagem = () => {
                 <input
                   type="radio"
                   name="faltaMercadoria"
-                  checked={outros.faltaMercadoria === false}
-                  onChange={() => setOutros(prev => ({ ...prev, faltaMercadoria: false }))}
+                  value="nao"
+                  checked={faltaMercadoria === 'nao'}
+                  onChange={(e) => setFaltaMercadoria(e.target.value)}
                 />
                 Não
               </RadioLabel>
             </RadioGroup>
-
-            {outros.faltaMercadoria && (
-              <Grid>
-                <Input
-                  label="Quantos quilos?"
-                  type="number"
-                  value={outros.kilosFalta}
-                  onChange={e => setOutros(prev => ({ ...prev, kilosFalta: parseFloat(e.target.value) }))}
-                />
-                <Input
-                  label="Quanto custou? (R$/kg)"
-                  type="number"
-                  value={outros.precoFalta}
-                  onChange={e => setOutros(prev => ({ ...prev, precoFalta: parseFloat(e.target.value) }))}
-                />
-              </Grid>
-            )}
           </div>
-
-          <div style={{ marginTop: '2rem' }}>
-            <h4>Gorjetas</h4>
-            <AddButton onClick={adicionarGorjeta}>
-              <FaPlus />
-            </AddButton>
-
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Valor da Gorjeta (R$)</Th>
-                  <Th></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {outros.gorjetas.map((item, index) => (
-                  <tr key={item.id}>
-                    <Td>
-                      <input
-                        type="number"
-                        value={item.valor}
-                        onChange={e => {
-                          const updated = [...outros.gorjetas];
-                          updated[index].valor = parseFloat(e.target.value);
-                          setOutros(prev => ({ ...prev, gorjetas: updated }));
-                        }}
-                      />
-                    </Td>
-                    <Td>
-                      <DeleteButton onClick={() => {
-                        setOutros(prev => ({
-                          ...prev,
-                          gorjetas: prev.gorjetas.filter(g => g.id !== item.id)
-                        }));
-                      }}>
-                        <FaTrash />
-                      </DeleteButton>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-
-            <TotalContainer>
-              <TotalLabel>Total Gorjetas:</TotalLabel>
-              <TotalValue>R$ {totalGorjetas.toFixed(2)}</TotalValue>
-            </TotalContainer>
-          </div>
-        </Section>
-
-        {/* Seção 6: Resumo */}
-        <Section>
-          <SectionTitle>Resumo da Viagem</SectionTitle>
           
-          <ResumoGrid>
-            <div>
-              <ResumoItem>
-                <span>Total Bruto:</span>
-                <strong>R$ {precoTotal.toFixed(2)}</strong>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Total Gastos:</span>
-                <strong>R$ {totalGastos.toFixed(2)}</strong>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Comissão (10%):</span>
-                <strong>R$ {(precoTotal * 0.1).toFixed(2)}</strong>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Total Líquido:</span>
-                <strong>R$ {(totalLiquido - precoTotal * 0.1).toFixed(2)}</strong>
-              </ResumoItem>
-            </div>
-            
-            <div>
-              <ResumoItem>
-                <span>Abastecimentos:</span>
-                <span>R$ {totalAbastecimentos.toFixed(2)}</span>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Oficina:</span>
-                <span>R$ {totalOficinas.toFixed(2)}</span>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Pedágios:</span>
-                <span>R$ {totalPedagios.toFixed(2)}</span>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Falta Mercadoria:</span>
-                <span>R$ {totalFaltaMercadoria.toFixed(2)}</span>
-              </ResumoItem>
-              <ResumoItem>
-                <span>Gorjetas:</span>
-                <span>R$ {totalGorjetas.toFixed(2)}</span>
-              </ResumoItem>
-            </div>
-          </ResumoGrid>
-
-          <Button 
-            onClick={finalizarViagem}
-            fullWidth
-            style={{ marginTop: '2rem' }}
-          >
-            Finalizar Viagem
+          {faltaMercadoria === 'sim' && (
+            <HalfRow>
+              <Input
+                label="Kilos de falta"
+                type="number"
+                placeholder="0"
+                value={kilosFalta}
+                onChange={(e) => setKilosFalta(e.target.value)}
+              />
+              <Input
+                label="Preço por kilo (R$)"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={precoFalta}
+                onChange={(e) => setPrecoFalta(e.target.value)}
+              />
+            </HalfRow>
+          )}
+          
+          <div style={{ marginTop: '20px' }}>
+            <ValueLabel>Gorjetas</ValueLabel>
+            {gorjetas.map(item => (
+              <div key={item.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Valor da gorjeta"
+                  value={item.valor}
+                  onChange={(e) => handleGorjetaChange(item.id, e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <ActionButton onClick={() => handleRemoveGorjeta(item.id)}>
+                  <FaTrash />
+                </ActionButton>
+              </div>
+            ))}
+            <AddButton onClick={handleAddGorjeta}>
+              <FaPlus /> Adicionar gorjeta
+            </AddButton>
+          </div>
+          
+          <TotalRow>Total: {formatCurrency(totalGorjetas)}</TotalRow>
+        </FormSection>
+        
+        {/* Resumo */}
+        <FormSection>
+          <SectionTitle>
+            <FaCalculator /> Resumo
+          </SectionTitle>
+          
+          <SummaryGrid>
+            <SummaryCard>
+              <SummaryLabel>Total Bruto</SummaryLabel>
+              <SummaryValue>{formatCurrency(precoTotal)}</SummaryValue>
+            </SummaryCard>
+            <SummaryCard>
+              <SummaryLabel>Total Bruto de Gastos</SummaryLabel>
+              <SummaryValue>{formatCurrency(totalGastos)}</SummaryValue>
+            </SummaryCard>
+            <SummaryCard>
+              <SummaryLabel>Comissão (10%)</SummaryLabel>
+              <SummaryValue>{formatCurrency(comissao)}</SummaryValue>
+            </SummaryCard>
+            <SummaryCard>
+              <SummaryLabel>Total Líquido</SummaryLabel>
+              <SummaryValue>{formatCurrency(totalLiquido)}</SummaryValue>
+            </SummaryCard>
+          </SummaryGrid>
+        </FormSection>
+        
+        <ButtonGroup>
+          <Button outline onClick={() => navigate('/home')}>
+            Cancelar
           </Button>
-        </Section>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar Viagem'}
+          </Button>
+        </ButtonGroup>
       </Content>
     </Container>
   );

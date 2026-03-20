@@ -5,20 +5,22 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { useAuth } from '../../contexts/AuthContext';
+
 const Container = styled.div`
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, ${props => props.theme.colors.background} 0%, #D4C4B0 100%);
   padding: ${props => props.theme.spacing.xl};
 `;
 
 const LoginCard = styled.div`
   background-color: ${props => props.theme.colors.white};
   border-radius: ${props => props.theme.borderRadius.large};
-  padding: ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.xl};
   width: 100%;
-  max-width: 400px;
+  max-width: 450px;
   box-shadow: ${props => props.theme.shadows.large};
 `;
 
@@ -26,49 +28,41 @@ const Title = styled.h2`
   color: ${props => props.theme.colors.primary};
   text-align: center;
   margin-bottom: ${props => props.theme.spacing.xl};
-  font-size: ${props => props.theme.fontSizes.xlarge};
+  font-size: ${props => props.theme.fontSizes.xxlarge};
+  font-weight: 600;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const StyledLink = styled(Link)`
   color: ${props => props.theme.colors.primary};
   text-decoration: none;
-  font-size: ${props => props.theme.fontSizes.small};
-  margin-top: ${props => props.theme.spacing.sm};
-  text-align: right;
+  font-size: ${props => props.theme.fontSizes.medium};
+  text-align: center;
+  display: block;
+  margin-top: ${props => props.theme.spacing.lg};
   
   &:hover {
     text-decoration: underline;
   }
 `;
 
-const CheckboxContainer = styled.div`
-  display: flex;
-  align-items: center;
-  margin: ${props => props.theme.spacing.md} 0;
-  gap: ${props => props.theme.spacing.xs};
-`;
-
-const Checkbox = styled.input`
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: ${props => props.theme.colors.primary};
-`;
-
-const CheckboxLabel = styled.label`
-  font-size: ${props => props.theme.fontSizes.small};
-  color: ${props => props.theme.colors.darkGray};
-  cursor: pointer;
+const DemoButton = styled(Button)`
+  margin-top: ${props => props.theme.spacing.md};
+  background-color: ${props => props.theme.colors.success};
+  
+  &:hover {
+    background-color: ${props => props.theme.colors.success}cc;
+  }
 `;
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginSimulado } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -88,6 +82,11 @@ export const Login = () => {
     }
   };
 
+  const handleDemoAccess = () => {
+    loginSimulado();
+    navigate('/home');
+  };
+
   return (
     <Container>
       <LoginCard>
@@ -95,8 +94,8 @@ export const Login = () => {
         
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Input
-            label="CPF ou E-mail"
-            placeholder="Digite seu CPF ou e-mail"
+            label="Email"
+            placeholder="seu@email.com"
             {...register('login', { 
               required: 'Campo obrigatório' 
             })}
@@ -108,51 +107,29 @@ export const Login = () => {
             type="password"
             placeholder="Digite sua senha"
             {...register('senha', { 
-              required: 'Campo obrigatório',
-              minLength: {
-                value: 6,
-                message: 'A senha deve ter no mínimo 6 caracteres'
-              }
+              required: 'Campo obrigatório'
             })}
             error={errors.senha?.message}
           />
 
-          <CheckboxContainer>
-            <Checkbox 
-              type="checkbox" 
-              id="remember" 
-              {...register('remember')}
-            />
-            <CheckboxLabel htmlFor="remember">
-              Lembrar meu acesso
-            </CheckboxLabel>
-          </CheckboxContainer>
-
-          <StyledLink to="/forgot-password">
-            Esqueceu sua senha?
-          </StyledLink>
-
           {error && (
-            <span style={{ color: '#FF6B6B', marginTop: '1rem' }}>
+            <span style={{ color: '#FF6B6B', fontSize: '0.875rem', textAlign: 'center' }}>
               {error}
             </span>
           )}
 
-          <Button 
-            type="submit" 
-            fullWidth 
-            disabled={loading}
-            style={{ marginTop: '1.5rem' }}
-          >
+          <Button type="submit" fullWidth disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>
+          
+          <DemoButton type="button" fullWidth onClick={handleDemoAccess} outline>
+            ⚡ Acesso Rápido (Demonstração)
+          </DemoButton>
         </Form>
 
-        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <StyledLink to="/register">
-            Não tem uma conta? Cadastre-se
-          </StyledLink>
-        </div>
+        <StyledLink to="/register">
+          Não tem uma conta? Cadastre-se
+        </StyledLink>
       </LoginCard>
     </Container>
   );

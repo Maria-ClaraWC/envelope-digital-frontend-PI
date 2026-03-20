@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import InputMask from 'inputmask';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { masks } from '../../utils/masks';
@@ -13,15 +12,16 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, ${props => props.theme.colors.background} 0%, #D4C4B0 100%);
   padding: ${props => props.theme.spacing.xl};
 `;
 
 const RegisterCard = styled.div`
   background-color: ${props => props.theme.colors.white};
   border-radius: ${props => props.theme.borderRadius.large};
-  padding: ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.xl};
   width: 100%;
-  max-width: 500px;
+  max-width: 550px;
   box-shadow: ${props => props.theme.shadows.large};
 `;
 
@@ -29,24 +29,37 @@ const Title = styled.h2`
   color: ${props => props.theme.colors.primary};
   text-align: center;
   margin-bottom: ${props => props.theme.spacing.xl};
-  font-size: ${props => props.theme.fontSizes.xlarge};
+  font-size: ${props => props.theme.fontSizes.xxlarge};
+  font-weight: 600;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const StyledLink = styled(Link)`
   color: ${props => props.theme.colors.primary};
   text-decoration: none;
-  font-size: ${props => props.theme.fontSizes.small};
+  font-size: ${props => props.theme.fontSizes.medium};
   text-align: center;
-  margin-top: ${props => props.theme.spacing.md};
+  display: block;
+  margin-top: ${props => props.theme.spacing.lg};
   
   &:hover {
     text-decoration: underline;
   }
+`;
+
+const DemoNote = styled.div`
+  margin-top: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.sm};
+  background-color: ${props => props.theme.colors.background};
+  border-radius: ${props => props.theme.borderRadius.small};
+  font-size: 0.75rem;
+  color: ${props => props.theme.colors.darkGray};
+  text-align: center;
 `;
 
 export const Register = () => {
@@ -60,13 +73,13 @@ export const Register = () => {
     setLoading(true);
     
     try {
-      // Aqui vai a chamada para a API
-      console.log('Dados do cadastro:', data);
-      // Simular chamada API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simular cadastro
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      alert('Cadastro realizado com sucesso!');
       navigate('/login');
     } catch (error) {
       console.error('Erro no cadastro:', error);
+      alert('Erro ao cadastrar. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -75,12 +88,12 @@ export const Register = () => {
   return (
     <Container>
       <RegisterCard>
-        <Title>Criar Conta</Title>
+        <Title>Cadastro de Motorista</Title>
         
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Input
             label="Nome Completo"
-            placeholder="Digite seu nome completo"
+            placeholder="Digite seu nome"
             {...register('nome', { 
               required: 'Nome é obrigatório',
               minLength: {
@@ -106,21 +119,8 @@ export const Register = () => {
           />
 
           <Input
-            label="CNH"
-            placeholder="Digite sua CNH"
-            {...register('cnh', { 
-              required: 'CNH é obrigatória',
-              minLength: {
-                value: 11,
-                message: 'CNH deve ter 11 caracteres'
-              }
-            })}
-            error={errors.cnh?.message}
-          />
-
-          <Input
             label="Placa do Caminhão"
-            placeholder="AAA-0000"
+            placeholder="ABC-1234"
             {...register('placa', { 
               required: 'Placa é obrigatória',
               pattern: {
@@ -135,9 +135,22 @@ export const Register = () => {
           />
 
           <Input
-            label="E-mail"
+            label="CNH"
+            placeholder="Número da CNH"
+            {...register('cnh', { 
+              required: 'CNH é obrigatória',
+              minLength: {
+                value: 11,
+                message: 'CNH deve ter 11 caracteres'
+              }
+            })}
+            error={errors.cnh?.message}
+          />
+
+          <Input
+            label="Email"
             type="email"
-            placeholder="Digite seu e-mail"
+            placeholder="seu@email.com"
             {...register('email', { 
               required: 'E-mail é obrigatório',
               pattern: {
@@ -155,42 +168,25 @@ export const Register = () => {
             {...register('senha', { 
               required: 'Senha é obrigatória',
               minLength: {
-                value: 8,
-                message: 'A senha deve ter no mínimo 8 caracteres'
-              },
-              pattern: {
-                value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                message: 'A senha deve conter maiúscula, minúscula e número'
+                value: 6,
+                message: 'A senha deve ter no mínimo 6 caracteres'
               }
             })}
             error={errors.senha?.message}
           />
 
-          <Input
-            label="Confirmar Senha"
-            type="password"
-            placeholder="Confirme sua senha"
-            {...register('confirmSenha', { 
-              required: 'Confirmação de senha é obrigatória',
-              validate: value => 
-                value === password || 'As senhas não coincidem'
-            })}
-            error={errors.confirmSenha?.message}
-          />
-
-          <Button 
-            type="submit" 
-            fullWidth 
-            disabled={loading}
-            style={{ marginTop: '1rem' }}
-          >
+          <Button type="submit" fullWidth disabled={loading}>
             {loading ? 'Cadastrando...' : 'Cadastrar'}
           </Button>
         </Form>
 
         <StyledLink to="/login">
-          Já tem uma conta? Faça login
+          Já tem uma conta? Fazer login
         </StyledLink>
+        
+        <DemoNote>
+          📝 Pré-visualização ao vivo em carregamento, as interações podem não ser salvas
+        </DemoNote>
       </RegisterCard>
     </Container>
   );

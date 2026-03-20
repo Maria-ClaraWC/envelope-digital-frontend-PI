@@ -36,6 +36,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // NOVA FUNÇÃO: Login simulado para testes
+  const loginSimulado = () => {
+    const usuarioTeste = {
+      id: 1,
+      nome: 'Usuário Teste',
+      email: 'teste@teste.com',
+      cpf: '123.456.789-00'
+    };
+    
+    const tokenSimulado = 'token_simulado_para_testes';
+    
+    localStorage.setItem('@App:user', JSON.stringify(usuarioTeste));
+    localStorage.setItem('@App:token', tokenSimulado);
+    
+    setUser(usuarioTeste);
+    
+    return usuarioTeste;
+  };
+
   const logout = () => {
     localStorage.removeItem('@App:user');
     localStorage.removeItem('@App:token');
@@ -44,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, loginSimulado, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
