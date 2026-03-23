@@ -21,13 +21,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await api.post('/auth/login', credentials);
-      const { user, token } = response.data;
+      // Simular login
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const user = {
+        id: 1,
+        nome: 'Usuário Teste',
+        email: credentials.login,
+        cpf: '123.456.789-00'
+      };
+      const token = 'token_simulado';
 
       localStorage.setItem('@App:user', JSON.stringify(user));
       localStorage.setItem('@App:token', token);
       
-      api.defaults.headers.Authorization = `Bearer ${token}`;
       setUser(user);
       
       return user;
@@ -36,7 +42,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NOVA FUNÇÃO: Login simulado para testes
   const loginSimulado = () => {
     const usuarioTeste = {
       id: 1,

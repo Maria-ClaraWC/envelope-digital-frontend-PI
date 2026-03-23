@@ -9,6 +9,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
 import { NovaViagem } from './pages/NovaViagem';
+import { PesquisarViagens } from './pages/PesquisarViagens';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -39,6 +40,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <NovaViagem />
+          </PrivateRoute>
+        } 
+      />
+      <Route 
+        path="/pesquisar-viagens" 
+        element={
+          <PrivateRoute>
+            <PesquisarViagens />
           </PrivateRoute>
         } 
       />

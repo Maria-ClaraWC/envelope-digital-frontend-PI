@@ -1,3 +1,4 @@
+// pages/LandingPage/index.js
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +8,6 @@ import { useAuth } from '../../contexts/AuthContext';
 const Container = styled.div`
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, ${props => props.theme.colors.background} 0%, #D4C4B0 100%);
@@ -77,8 +77,17 @@ export const LandingPage = () => {
             Login
           </Button>
         </ButtonContainer>
+        <ButtonContainer>
+          <Button 
+            small 
+            onClick={acessoRapido}
+            style={{ background: '#9A6767', borderColor: '#9A6767' }}
+          >
+            🚀 Acesso Rápido (Demo)
+          </Button>
+        </ButtonContainer>
         <DemoBadge>
-          🔧 Modo de demonstração - Clique em "Login" e use o acesso rápido
+          🔧 Pré-visualização ao vivo em carregamento, as interações podem não ser salvas
         </DemoBadge>
       </Content>
     </Container>

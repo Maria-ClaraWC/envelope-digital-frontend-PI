@@ -1,13 +1,12 @@
+// pages/Home/index.js
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaChartLine, FaTruck, FaHistory } from 'react-icons/fa';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import { Input } from '../../components/Input';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../services/api';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -20,144 +19,172 @@ const Content = styled.main`
   padding: ${props => props.theme.spacing.xl};
 `;
 
-const AddSection = styled.section`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: ${props => props.theme.spacing.xxl};
+const WelcomeSection = styled.div`
+  margin-bottom: ${props => props.theme.spacing.xl};
+  text-align: center;
 `;
 
-const AddCard = styled(Card)`
-  width: 200px;
-  height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px dashed ${props => props.theme.colors.primary};
-
-  &:hover {
-    transform: scale(1.05);
-    background-color: ${props => props.theme.colors.primary}10;
-    border-color: ${props => props.theme.colors.primaryDark};
+const WelcomeTitle = styled.h1`
+  font-size: ${props => props.theme.fontSizes.xxlarge};
+  color: ${props => props.theme.colors.black};
+  margin-bottom: ${props => props.theme.spacing.sm};
+  
+  span {
+    color: ${props => props.theme.colors.primary};
   }
 `;
 
-const PlusIcon = styled(FaPlus)`
-  font-size: 4rem;
+const WelcomeSubtitle = styled.p`
+  color: ${props => props.theme.colors.darkGray};
+  font-size: ${props => props.theme.fontSizes.medium};
+`;
+
+const ActionGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.xl};
+`;
+
+const ActionCard = styled(Card)`
+  text-align: center;
+  padding: ${props => props.theme.spacing.xl} ${props => props.theme.spacing.lg};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: ${props => props.theme.colors.white};
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: ${props => props.theme.shadows.medium};
+  }
+`;
+
+const ActionIcon = styled.div`
+  font-size: 2.5rem;
   color: ${props => props.theme.colors.primary};
   margin-bottom: ${props => props.theme.spacing.md};
 `;
 
-const AddText = styled.p`
-  font-size: ${props => props.theme.fontSizes.medium};
-  color: ${props => props.theme.colors.darkGray};
-  font-weight: 500;
+const ActionTitle = styled.h3`
+  font-size: ${props => props.theme.fontSizes.large};
+  color: ${props => props.theme.colors.black};
+  margin-bottom: ${props => props.theme.spacing.sm};
+  font-weight: 600;
 `;
 
-const FilterSection = styled.section`
-  background-color: ${props => props.theme.colors.white};
+const ActionDescription = styled.p`
+  color: ${props => props.theme.colors.darkGray};
+  font-size: ${props => props.theme.fontSizes.small};
+`;
+
+const RecentSection = styled.div`
+  background: ${props => props.theme.colors.white};
   border-radius: ${props => props.theme.borderRadius.large};
   padding: ${props => props.theme.spacing.xl};
-  margin-bottom: ${props => props.theme.spacing.xl};
   box-shadow: ${props => props.theme.shadows.small};
 `;
 
-const FilterTitle = styled.h3`
-  color: ${props => props.theme.colors.primary};
-  margin-bottom: ${props => props.theme.spacing.lg};
-  font-size: ${props => props.theme.fontSizes.large};
-  font-weight: 600;
-`;
-
-const FilterGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
-`;
-
-const FilterButtons = styled.div`
-  display: flex;
-  gap: ${props => props.theme.spacing.md};
-  justify-content: flex-end;
-`;
-
-const ViagensSection = styled.section`
-  h2 {
-    color: ${props => props.theme.colors.primary};
-    margin-bottom: ${props => props.theme.spacing.lg};
-    font-size: ${props => props.theme.fontSizes.xlarge};
-    font-weight: 600;
-  }
-`;
-
-const ViagensGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: ${props => props.theme.spacing.lg};
-`;
-
-const ViagemCard = styled(Card)`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.sm};
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-  }
-`;
-
-const ViagemLocal = styled.div`
-  font-size: ${props => props.theme.fontSizes.large};
-  font-weight: 600;
-  color: ${props => props.theme.colors.primary};
-`;
-
-const ViagemPeriodo = styled.div`
-  color: ${props => props.theme.colors.darkGray};
-  font-size: ${props => props.theme.fontSizes.small};
-`;
-
-const ViagemData = styled.div`
+const SectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-top: ${props => props.theme.spacing.sm};
-  padding-top: ${props => props.theme.spacing.sm};
-  border-top: 1px solid ${props => props.theme.colors.gray};
-  font-size: ${props => props.theme.fontSizes.small};
-  color: ${props => props.theme.colors.darkGray};
+  align-items: center;
+  margin-bottom: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 2px solid ${props => props.theme.colors.background};
+  
+  h2 {
+    font-size: ${props => props.theme.fontSizes.large};
+    color: ${props => props.theme.colors.black};
+    display: flex;
+    align-items: center;
+    gap: ${props => props.theme.spacing.sm};
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: ${props => props.theme.spacing.xxl};
-  background-color: ${props => props.theme.colors.white};
-  border-radius: ${props => props.theme.borderRadius.large};
+  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.xl};
   color: ${props => props.theme.colors.darkGray};
   
-  p {
-    margin: ${props => props.theme.spacing.sm} 0;
+  svg {
+    font-size: 3rem;
+    margin-bottom: ${props => props.theme.spacing.md};
+    opacity: 0.5;
+    color: ${props => props.theme.colors.primary};
   }
   
-  p:first-child {
-    font-size: ${props => props.theme.fontSizes.large};
+  p {
     margin-bottom: ${props => props.theme.spacing.md};
   }
 `;
 
-const DemoBadge = styled.div`
-  background-color: #FFE4B5;
-  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+const ViagemList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const ViagemItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background};
   border-radius: ${props => props.theme.borderRadius.medium};
-  margin-bottom: ${props => props.theme.spacing.lg};
-  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:hover {
+    background: ${props => props.theme.colors.beige};
+    transform: translateX(4px);
+  }
+`;
+
+const ViagemInfo = styled.div`
+  flex: 1;
+  
+  h4 {
+    font-weight: 600;
+    color: ${props => props.theme.colors.black};
+    margin-bottom: ${props => props.theme.spacing.xs};
+  }
+  
+  p {
+    font-size: ${props => props.theme.fontSizes.small};
+    color: ${props => props.theme.colors.darkGray};
+  }
+`;
+
+const ViagemValue = styled.div`
+  font-weight: 700;
   color: ${props => props.theme.colors.primary};
-  font-size: ${props => props.theme.fontSizes.small};
+  font-size: ${props => props.theme.fontSizes.large};
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.xl};
+`;
+
+const StatCard = styled.div`
+  background: ${props => props.theme.colors.primary};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  padding: ${props => props.theme.spacing.lg};
+  color: ${props => props.theme.colors.white};
+  text-align: center;
+  
+  h3 {
+    font-size: ${props => props.theme.fontSizes.xlarge};
+    font-weight: 700;
+    margin-bottom: ${props => props.theme.spacing.xs};
+  }
+  
+  p {
+    font-size: ${props => props.theme.fontSizes.small};
+    opacity: 0.9;
+  }
 `;
 
 // Dados simulados
@@ -167,10 +194,6 @@ const viagensSimuladas = [
     cidade_saida: 'São Paulo',
     cidade_chegada: 'Rio de Janeiro',
     data_entrada: '2024-03-15',
-    data_chegada: '2024-03-17',
-    km_saida: 1000,
-    km_entrada: 1500,
-    peso_saida: 20,
     total_liquido: 8500
   },
   {
@@ -178,22 +201,7 @@ const viagensSimuladas = [
     cidade_saida: 'Curitiba',
     cidade_chegada: 'Porto Alegre',
     data_entrada: '2024-03-10',
-    data_chegada: '2024-03-12',
-    km_saida: 2000,
-    km_entrada: 2450,
-    peso_saida: 18,
     total_liquido: 7200
-  },
-  {
-    id: 3,
-    cidade_saida: 'Belo Horizonte',
-    cidade_chegada: 'Brasília',
-    data_entrada: '2024-03-05',
-    data_chegada: '2024-03-07',
-    km_saida: 3000,
-    km_entrada: 3450,
-    peso_saida: 22,
-    total_liquido: 9800
   }
 ];
 
@@ -201,77 +209,22 @@ export const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [viagens, setViagens] = useState([]);
-  const [filteredViagens, setFilteredViagens] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [usandoSimulacao, setUsandoSimulacao] = useState(false);
-  const [filters, setFilters] = useState({
-    nomeMotorista: '',
-    cidadeOrigem: '',
-    cidadeDestino: '',
-    dataInicio: '',
-    dataFim: ''
-  });
+  const [stats, setStats] = useState({ totalViagens: 0, totalRecebido: 0, mediaViagem: 0 });
 
   useEffect(() => {
     carregarViagens();
   }, []);
 
-  useEffect(() => {
-    aplicarFiltros();
-  }, [filters, viagens]);
-
-  const carregarViagens = async () => {
-    try {
-      const response = await api.get('/viagens');
-      setViagens(response.data);
-      setFilteredViagens(response.data);
-      setUsandoSimulacao(false);
-    } catch (error) {
-      setViagens(viagensSimuladas);
-      setFilteredViagens(viagensSimuladas);
-      setUsandoSimulacao(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const aplicarFiltros = () => {
-    let resultado = [...viagens];
+  const carregarViagens = () => {
+    const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
+    const viagensParaExibir = viagensSalvas.length > 0 ? viagensSalvas.slice(-3) : viagensSimuladas;
+    setViagens(viagensParaExibir);
     
-    if (filters.cidadeOrigem) {
-      resultado = resultado.filter(v => 
-        v.cidade_saida?.toLowerCase().includes(filters.cidadeOrigem.toLowerCase())
-      );
-    }
-    
-    if (filters.cidadeDestino) {
-      resultado = resultado.filter(v => 
-        v.cidade_chegada?.toLowerCase().includes(filters.cidadeDestino.toLowerCase())
-      );
-    }
-    
-    if (filters.dataInicio) {
-      resultado = resultado.filter(v => v.data_entrada >= filters.dataInicio);
-    }
-    
-    if (filters.dataFim) {
-      resultado = resultado.filter(v => v.data_chegada <= filters.dataFim);
-    }
-    
-    setFilteredViagens(resultado);
-  };
-
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-  };
-
-  const limparFiltros = () => {
-    setFilters({
-      nomeMotorista: '',
-      cidadeOrigem: '',
-      cidadeDestino: '',
-      dataInicio: '',
-      dataFim: ''
+    const totalRecebido = viagensParaExibir.reduce((sum, v) => sum + (v.total_liquido || 0), 0);
+    setStats({
+      totalViagens: viagensParaExibir.length,
+      totalRecebido,
+      mediaViagem: viagensParaExibir.length > 0 ? totalRecebido / viagensParaExibir.length : 0
     });
   };
 
@@ -284,104 +237,98 @@ export const Home = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
   };
 
+  const acoes = [
+    {
+      icon: <FaPlus />,
+      title: 'Adicionar nova viagem',
+      description: 'Cadastre uma nova viagem com todos os detalhes',
+      onClick: () => navigate('/nova-viagem')
+    },
+    {
+      icon: <FaSearch />,
+      title: 'Pesquisar Viagens',
+      description: 'Busque viagens por período, rota ou valor',
+      onClick: () => navigate('/pesquisar-viagens')
+    },
+    {
+      icon: <FaChartLine />,
+      title: 'Relatórios',
+      description: 'Visualize seus ganhos e estatísticas',
+      onClick: () => navigate('/pesquisar-viagens')
+    }
+  ];
+
   return (
     <Container>
       <Header />
       
       <Content>
-        <AddSection>
-          <AddCard onClick={() => navigate('/nova-viagem')}>
-            <PlusIcon />
-            <AddText>Adicionar nova viagem</AddText>
-          </AddCard>
-        </AddSection>
+        <WelcomeSection>
+          <WelcomeTitle>
+            Olá, <span>{user?.nome || 'Motorista'}</span>
+          </WelcomeTitle>
+          <WelcomeSubtitle>
+            Gerencie suas viagens e acompanhe seus resultados
+          </WelcomeSubtitle>
+        </WelcomeSection>
 
-        {usandoSimulacao && (
-          <DemoBadge>
-            ⚠️ Modo de demonstração - Dados simulados (backend não conectado)
-          </DemoBadge>
-        )}
+        <StatsGrid>
+          <StatCard>
+            <h3>{stats.totalViagens}</h3>
+            <p>Viagens Realizadas</p>
+          </StatCard>
+          <StatCard>
+            <h3>{formatarMoeda(stats.totalRecebido)}</h3>
+            <p>Total Recebido</p>
+          </StatCard>
+          <StatCard>
+            <h3>{formatarMoeda(stats.mediaViagem)}</h3>
+            <p>Média por Viagem</p>
+          </StatCard>
+        </StatsGrid>
 
-        <FilterSection>
-          <FilterTitle>Filtros de Pesquisa</FilterTitle>
-          <FilterGrid>
-            <Input
-              label="Nome do Motorista"
-              placeholder="Digite o nome do motorista"
-              value={filters.nomeMotorista}
-              onChange={(e) => handleFilterChange('nomeMotorista', e.target.value)}
-            />
-            <Input
-              label="Cidade de Origem"
-              placeholder="Digite a cidade de origem"
-              value={filters.cidadeOrigem}
-              onChange={(e) => handleFilterChange('cidadeOrigem', e.target.value)}
-            />
-            <Input
-              label="Cidade de Destino"
-              placeholder="Digite a cidade de destino"
-              value={filters.cidadeDestino}
-              onChange={(e) => handleFilterChange('cidadeDestino', e.target.value)}
-            />
-            <Input
-              label="Data Início (a partir de)"
-              type="date"
-              value={filters.dataInicio}
-              onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
-            />
-            <Input
-              label="Data Fim (até)"
-              type="date"
-              value={filters.dataFim}
-              onChange={(e) => handleFilterChange('dataFim', e.target.value)}
-            />
-          </FilterGrid>
-          <FilterButtons>
-            <Button small onClick={aplicarFiltros}>
-              🔍 PESQUISAR
+        <ActionGrid>
+          {acoes.map((acao, index) => (
+            <ActionCard key={index} onClick={acao.onClick}>
+              <ActionIcon>{acao.icon}</ActionIcon>
+              <ActionTitle>{acao.title}</ActionTitle>
+              <ActionDescription>{acao.description}</ActionDescription>
+            </ActionCard>
+          ))}
+        </ActionGrid>
+
+        <RecentSection>
+          <SectionHeader>
+            <h2>
+              <FaHistory /> Últimas Viagens
+            </h2>
+            <Button small onClick={() => navigate('/pesquisar-viagens')}>
+              Ver todas
             </Button>
-            <Button small outline onClick={limparFiltros}>
-              Limpar
-            </Button>
-          </FilterButtons>
-        </FilterSection>
-
-        <ViagensSection>
-          <h2>Resultados ({filteredViagens.length})</h2>
+          </SectionHeader>
           
-          {loading ? (
+          {viagens.length === 0 ? (
             <EmptyState>
-              <p>Carregando...</p>
-            </EmptyState>
-          ) : filteredViagens.length === 0 ? (
-            <EmptyState>
-              <p>Nenhuma viagem encontrada com os filtros selecionados.</p>
+              <FaTruck />
+              <p>Nenhuma viagem cadastrada ainda.</p>
+              <Button small onClick={() => navigate('/nova-viagem')}>
+                <FaPlus /> Adicionar nova viagem
+              </Button>
             </EmptyState>
           ) : (
-            <ViagensGrid>
-              {filteredViagens.map(viagem => (
-                <ViagemCard 
-                  key={viagem.id}
-                  onClick={() => navigate(`/viagem/${viagem.id}`)}
-                >
-                  <ViagemLocal>
-                    {viagem.cidade_saida} → {viagem.cidade_chegada}
-                  </ViagemLocal>
-                  <ViagemPeriodo>
-                    📅 {formatarData(viagem.data_entrada)} - {formatarData(viagem.data_chegada)}
-                  </ViagemPeriodo>
-                  <ViagemData>
-                    <span>📊 KM: {viagem.km_saida} - {viagem.km_entrada}</span>
-                    <span>⚖️ {viagem.peso_saida}t</span>
-                  </ViagemData>
-                  <ViagemData>
-                    <span>💰 {formatarMoeda(viagem.total_liquido || 0)}</span>
-                  </ViagemData>
-                </ViagemCard>
+            <ViagemList>
+              {viagens.map(viagem => (
+                <ViagemItem key={viagem.id} onClick={() => navigate(`/viagem/${viagem.id}`)}>
+                  <ViagemInfo>
+                    <h4>{viagem.cidade_saida} → {viagem.cidade_chegada}</h4>
+                    <p>📅 {formatarData(viagem.data_entrada)}</p>
+                  </ViagemInfo>
+                  <ViagemValue>{formatarMoeda(viagem.total_liquido || 0)}</ViagemValue>
+                </ViagemItem>
               ))}
-            </ViagensGrid>
+            </ViagemList>
           )}
-        </ViagensSection>
+        </RecentSection>
       </Content>
     </Container>
   );

@@ -1,10 +1,10 @@
+// components/Input/index.js
 import React, { forwardRef } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  margin-bottom: ${props => props.theme.spacing.md};
   width: 100%;
 `;
 

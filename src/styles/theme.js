@@ -1,14 +1,20 @@
+// styles/theme.js
 export const theme = {
   colors: {
     background: '#E0D2BF',
+    backgroundLight: '#F5EDE3',
     primary: '#9A6767',
     primaryDark: '#7a4f4f',
+    primaryLight: '#b88a8a',
     white: '#FFFFFF',
     black: '#333333',
     gray: '#F5F5F5',
     darkGray: '#666666',
     error: '#FF6B6B',
-    success: '#4CAF50'
+    success: '#4CAF50',
+    warning: '#FFC107',
+    beige: '#D4C4B0',
+    cream: '#F9F5F0'
   },
   fonts: {
     main: "'Roboto', sans-serif",
