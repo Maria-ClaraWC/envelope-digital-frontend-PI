@@ -1,4 +1,4 @@
-// pages/Login/index.js
+// pages/Login/index.js - Parte relevante
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Link } from 'react-router-dom';
@@ -9,92 +9,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { masks } from '../../utils/masks';
 import { validators } from '../../utils/validators';
 
-const Container = styled.div`
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, ${props => props.theme.colors.background} 0%, #D4C4B0 100%);
-  padding: ${props => props.theme.spacing.xl};
-`;
-
-const LoginCard = styled.div`
-  background-color: ${props => props.theme.colors.white};
-  border-radius: ${props => props.theme.borderRadius.large};
-  padding: ${props => props.theme.spacing.xxl} ${props => props.theme.spacing.xl};
-  width: 100%;
-  max-width: 450px;
-  box-shadow: ${props => props.theme.shadows.large};
-`;
-
-const Title = styled.h2`
-  color: ${props => props.theme.colors.primary};
-  text-align: center;
-  margin-bottom: ${props => props.theme.spacing.xl};
-  font-size: ${props => props.theme.fontSizes.xxlarge};
-  font-weight: 600;
-`;
-
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.md};
-`;
-
-const StyledLink = styled(Link)`
-  color: ${props => props.theme.colors.primary};
-  text-decoration: none;
-  font-size: ${props => props.theme.fontSizes.medium};
-  text-align: center;
-  display: block;
-  margin-top: ${props => props.theme.spacing.lg};
-  
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const Divider = styled.div`
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: ${props => props.theme.spacing.lg} 0;
-  
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid ${props => props.theme.colors.background};
-  }
-  
-  span {
-    margin: 0 ${props => props.theme.spacing.md};
-    color: ${props => props.theme.colors.darkGray};
-    font-size: ${props => props.theme.fontSizes.small};
-  }
-`;
-
-const CpfLoginButton = styled(Button)`
-  background-color: ${props => props.theme.colors.primary};
-  margin-top: ${props => props.theme.spacing.sm};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.primaryDark};
-  }
-`;
-
-const DemoButton = styled(Button)`
-  margin-top: ${props => props.theme.spacing.md};
-  background-color: ${props => props.theme.colors.success};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.success}cc;
-  }
-`;
+// ... (restante dos estilos)
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginSimulado } = useAuth();
+  const { login, loginSimulado } = useAuth(); // Certifique-se de importar loginSimulado
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cpfLogin, setCpfLogin] = useState('');
@@ -106,14 +25,15 @@ export const Login = () => {
     setLoading(true);
     setError('');
     
-    try {
-      await login(data);
+    const result = await login(data.login, data.senha);
+    
+    if (result.success) {
       navigate('/home');
-    } catch (err) {
-      setError('Credenciais inválidas. Tente novamente.');
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error || 'Credenciais inválidas. Tente novamente.');
     }
+    
+    setLoading(false);
   };
 
   const handleCpfLogin = async () => {
@@ -132,19 +52,30 @@ export const Login = () => {
     setError('');
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      loginSimulado();
-      navigate('/home');
+      // Tentar login com CPF
+      const result = await login(cpfLimpo, '123456'); // senha padrão para demo
+      
+      if (result.success) {
+        navigate('/home');
+      } else {
+        setError('CPF não encontrado. Faça o cadastro primeiro.');
+      }
     } catch (err) {
-      setError('CPF não encontrado. Faça o cadastro primeiro.');
+      setError('Erro ao fazer login. Tente novamente.');
     } finally {
       setCpfLoading(false);
     }
   };
 
   const handleDemoAccess = () => {
-    loginSimulado();
-    navigate('/home');
+    if (loginSimulado) {
+      loginSimulado();
+      navigate('/home');
+    } else {
+      console.error('loginSimulado não disponível');
+      // Fallback para login padrão
+      onSubmit({ login: 'demo@demo.com', senha: '123456' });
+    }
   };
 
   const handleCpfChange = (e) => {
@@ -158,8 +89,8 @@ export const Login = () => {
         
         <Form onSubmit={handleSubmit(onSubmit)}>
           <Input
-            label="Email"
-            placeholder="seu@email.com"
+            label="Email ou CPF"
+            placeholder="seu@email.com ou 000.000.000-00"
             {...register('login', { 
               required: 'Campo obrigatório' 
             })}
@@ -206,7 +137,7 @@ export const Login = () => {
           {cpfLoading ? 'Verificando...' : '🔑 Entrar com CPF'}
         </CpfLoginButton>
 
-        <DemoButton type="button" fullWidth onClick={handleDemoAccess} outline>
+        <DemoButton type="button" fullWidth onClick={handleDemoAccess}>
           ⚡ Acesso Rápido (Demonstração)
         </DemoButton>
 

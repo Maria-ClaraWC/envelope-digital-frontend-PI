@@ -1,83 +1,96 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { api } from '../services/api';
+import api from '../services/api';
 
 const AuthContext = createContext({});
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('@App:user');
-    const storedToken = localStorage.getItem('@App:token');
-
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      api.defaults.headers.Authorization = `Bearer ${storedToken}`;
-    }
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
     
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser));
+      api.defaults.headers.Authorization = `Bearer ${token}`;
+    }
     setLoading(false);
   }, []);
 
-  const login = async (credentials) => {
+  const login = async (login, senha) => {
     try {
-      // Simular login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const user = {
-        id: 1,
-        nome: 'Usuário Teste',
-        email: credentials.login,
-        cpf: '123.456.789-00'
-      };
-      const token = 'token_simulado';
-
-      localStorage.setItem('@App:user', JSON.stringify(user));
-      localStorage.setItem('@App:token', token);
+      const response = await api.post('/auth/login', { login, senha });
+      const { user, token } = response.data;
       
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      api.defaults.headers.Authorization = `Bearer ${token}`;
       setUser(user);
       
-      return user;
+      return { success: true };
     } catch (error) {
-      throw new Error('Falha na autenticação');
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Erro ao fazer login' 
+      };
     }
   };
 
-  const loginSimulado = () => {
-    const usuarioTeste = {
-      id: 1,
-      nome: 'Usuário Teste',
-      email: 'teste@teste.com',
-      cpf: '123.456.789-00'
-    };
-    
-    const tokenSimulado = 'token_simulado_para_testes';
-    
-    localStorage.setItem('@App:user', JSON.stringify(usuarioTeste));
-    localStorage.setItem('@App:token', tokenSimulado);
-    
-    setUser(usuarioTeste);
-    
-    return usuarioTeste;
+  const register = async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { user, token } = response.data;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      api.defaults.headers.Authorization = `Bearer ${token}`;
+      setUser(user);
+      
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Erro ao cadastrar' 
+      };
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('@App:user');
-    localStorage.removeItem('@App:token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete api.defaults.headers.Authorization;
     setUser(null);
   };
 
+  // Função de login simulado para desenvolvimento/demo
+  const loginSimulado = () => {
+    const userSimulado = {
+      id: 1,
+      nome: 'Usuário Demo',
+      email: 'demo@envelopedigital.com',
+      cpf: '000.000.000-00'
+    };
+    const tokenSimulado = 'demo-token-123456';
+    
+    localStorage.setItem('token', tokenSimulado);
+    localStorage.setItem('user', JSON.stringify(userSimulado));
+    api.defaults.headers.Authorization = `Bearer ${tokenSimulado}`;
+    setUser(userSimulado);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, loginSimulado, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      loginSimulado  // Adicionado aqui
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

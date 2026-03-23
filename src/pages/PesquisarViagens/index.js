@@ -1,12 +1,13 @@
-// pages/PesquisarViagens/index.js
-import React, { useState, useEffect } from 'react';
+// src/pages/PesquisarViagens/index.js
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { FaSearch, FaCalendarAlt, FaMapMarkerAlt, FaDollarSign, FaFilter, FaTimes } from 'react-icons/fa';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import { Input } from '../../components/Input';
+import CidadeSearch from '../../components/CidadeSearch';
+import api from '../../services/api';
+import { FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaFilter, FaTimes } from 'react-icons/fa';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -205,8 +206,44 @@ const FilterBadge = styled.span`
   }
 `;
 
+const CityField = styled.div`
+  margin-bottom: ${props => props.theme.spacing.md};
+  
+  label {
+    display: block;
+    margin-bottom: ${props => props.theme.spacing.xs};
+    font-weight: 500;
+    color: ${props => props.theme.colors.black};
+  }
+`;
+
+const InputField = styled.div`
+  margin-bottom: ${props => props.theme.spacing.md};
+  
+  label {
+    display: block;
+    margin-bottom: ${props => props.theme.spacing.xs};
+    font-weight: 500;
+    color: ${props => props.theme.colors.black};
+  }
+  
+  input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    
+    &:focus {
+      outline: none;
+      border-color: #9A6767;
+      box-shadow: 0 0 0 2px rgba(154, 103, 103, 0.1);
+    }
+  }
+`;
+
 const formatarMoeda = (valor) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
 };
 
 const formatarData = (data) => {
@@ -214,13 +251,13 @@ const formatarData = (data) => {
   return new Date(data).toLocaleDateString('pt-BR');
 };
 
-export const PesquisarViagens = () => {
+const PesquisarViagens = () => {
   const navigate = useNavigate();
+  const [cidadeOrigem, setCidadeOrigem] = useState(null);
+  const [cidadeDestino, setCidadeDestino] = useState(null);
   const [viagens, setViagens] = useState([]);
-  const [filteredViagens, setFilteredViagens] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
-    cidadeOrigem: '',
-    cidadeDestino: '',
     dataInicio: '',
     dataFim: '',
     valorMin: '',
@@ -228,72 +265,26 @@ export const PesquisarViagens = () => {
   });
   const [activeFilters, setActiveFilters] = useState([]);
 
-  useEffect(() => {
-    carregarViagens();
-  }, []);
-
-  const carregarViagens = () => {
-    const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
-    const viagensMock = [
-      {
-        id: 1,
-        cidade_saida: 'São Paulo',
-        cidade_chegada: 'Rio de Janeiro',
-        data_entrada: '2024-03-15',
-        data_chegada: '2024-03-17',
-        km_saida: 1000,
-        km_entrada: 1500,
-        pesoSaida: 20,
-        total_liquido: 8500
-      },
-      {
-        id: 2,
-        cidade_saida: 'Curitiba',
-        cidade_chegada: 'Porto Alegre',
-        data_entrada: '2024-03-10',
-        data_chegada: '2024-03-12',
-        km_saida: 2000,
-        km_entrada: 2450,
-        pesoSaida: 18,
-        total_liquido: 7200
-      },
-      {
-        id: 3,
-        cidade_saida: 'Belo Horizonte',
-        cidade_chegada: 'Brasília',
-        data_entrada: '2024-03-05',
-        data_chegada: '2024-03-07',
-        km_saida: 3000,
-        km_entrada: 3450,
-        pesoSaida: 22,
-        total_liquido: 9800
-      }
-    ];
-    
-    setViagens(viagensSalvas.length > 0 ? viagensSalvas : viagensMock);
-    setFilteredViagens(viagensSalvas.length > 0 ? viagensSalvas : viagensMock);
-  };
-
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  const aplicarFiltros = () => {
-    let resultado = [...viagens];
+  const aplicarFiltros = (resultados) => {
+    let resultado = [...resultados];
     const novosActiveFilters = [];
     
-    if (filters.cidadeOrigem) {
+    if (cidadeOrigem) {
       resultado = resultado.filter(v => 
-        v.cidade_saida?.toLowerCase().includes(filters.cidadeOrigem.toLowerCase())
+        v.cidade_saida?.toLowerCase().includes(cidadeOrigem.cidade?.toLowerCase())
       );
-      novosActiveFilters.push({ field: 'cidadeOrigem', label: `Origem: ${filters.cidadeOrigem}` });
+      novosActiveFilters.push({ field: 'cidadeOrigem', label: `Origem: ${cidadeOrigem.cidade}` });
     }
     
-    if (filters.cidadeDestino) {
+    if (cidadeDestino) {
       resultado = resultado.filter(v => 
-        v.cidade_chegada?.toLowerCase().includes(filters.cidadeDestino.toLowerCase())
+        v.cidade_chegada?.toLowerCase().includes(cidadeDestino.cidade?.toLowerCase())
       );
-      novosActiveFilters.push({ field: 'cidadeDestino', label: `Destino: ${filters.cidadeDestino}` });
+      novosActiveFilters.push({ field: 'cidadeDestino', label: `Destino: ${cidadeDestino.cidade}` });
     }
     
     if (filters.dataInicio) {
@@ -316,26 +307,59 @@ export const PesquisarViagens = () => {
       novosActiveFilters.push({ field: 'valorMax', label: `Valor max: ${formatarMoeda(filters.valorMax)}` });
     }
     
-    setFilteredViagens(resultado);
+    setViagens(resultado);
     setActiveFilters(novosActiveFilters);
   };
 
+  const handleSearch = async () => {
+    if (!cidadeOrigem && !cidadeDestino && !filters.dataInicio && !filters.dataFim && !filters.valorMin && !filters.valorMax) {
+      alert('Selecione pelo menos um filtro para pesquisar');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const params = {};
+      if (cidadeOrigem) params.id_saida = cidadeOrigem.id;
+      if (cidadeDestino) params.id_chegada = cidadeDestino.id;
+      if (filters.dataInicio) params.data_inicio = filters.dataInicio;
+      if (filters.dataFim) params.data_fim = filters.dataFim;
+      if (filters.valorMin) params.valor_min = filters.valorMin;
+      if (filters.valorMax) params.valor_max = filters.valorMax;
+      
+      const response = await api.get('/viagens', { params });
+      aplicarFiltros(response.data);
+    } catch (error) {
+      console.error('Erro ao pesquisar viagens:', error);
+      alert(error.response?.data?.error || 'Erro ao pesquisar viagens');
+      setViagens([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const limparFiltros = () => {
+    setCidadeOrigem(null);
+    setCidadeDestino(null);
     setFilters({
-      cidadeOrigem: '',
-      cidadeDestino: '',
       dataInicio: '',
       dataFim: '',
       valorMin: '',
       valorMax: ''
     });
-    setFilteredViagens(viagens);
     setActiveFilters([]);
+    setViagens([]);
   };
 
   const removerFiltro = (field) => {
-    setFilters(prev => ({ ...prev, [field]: '' }));
-    setTimeout(() => aplicarFiltros(), 0);
+    if (field === 'cidadeOrigem') {
+      setCidadeOrigem(null);
+    } else if (field === 'cidadeDestino') {
+      setCidadeDestino(null);
+    } else {
+      setFilters(prev => ({ ...prev, [field]: '' }));
+    }
+    setTimeout(() => handleSearch(), 100);
   };
 
   return (
@@ -344,71 +368,88 @@ export const PesquisarViagens = () => {
       
       <Content>
         <PageTitle>
-          <FaSearch /> Filtros de Pesquisa
+          <FaSearch /> Pesquisar Viagens
         </PageTitle>
         <PageSubtitle>
-          Encontre viagens por período, rota ou valor
+          Encontre viagens por rota, período ou valor
         </PageSubtitle>
 
         <FilterSection>
           <FilterTitle>
-            <FaFilter /> Filtros
+            <FaFilter /> Filtros de Pesquisa
           </FilterTitle>
           
           <FilterGrid>
-            <Input
-              label="Cidade de Origem"
-              placeholder="Digite a cidade de origem"
-              value={filters.cidadeOrigem}
-              onChange={(e) => handleFilterChange('cidadeOrigem', e.target.value)}
-            />
-            <Input
-              label="Cidade de Destino"
-              placeholder="Digite a cidade de destino"
-              value={filters.cidadeDestino}
-              onChange={(e) => handleFilterChange('cidadeDestino', e.target.value)}
-            />
-            <Input
-              label="Data Início (a partir de)"
-              type="date"
-              value={filters.dataInicio}
-              onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
-            />
-            <Input
-              label="Data Fim (até)"
-              type="date"
-              value={filters.dataFim}
-              onChange={(e) => handleFilterChange('dataFim', e.target.value)}
-            />
-            <Input
-              label="Valor Mínimo (R$)"
-              type="number"
-              placeholder="0,00"
-              value={filters.valorMin}
-              onChange={(e) => handleFilterChange('valorMin', e.target.value)}
-            />
-            <Input
-              label="Valor Máximo (R$)"
-              type="number"
-              placeholder="0,00"
-              value={filters.valorMax}
-              onChange={(e) => handleFilterChange('valorMax', e.target.value)}
-            />
+            <CityField>
+              <label>Cidade de Origem</label>
+              <CidadeSearch 
+                onSelect={setCidadeOrigem}
+                placeholder="Todas as origens"
+              />
+            </CityField>
+            
+            <CityField>
+              <label>Cidade de Destino</label>
+              <CidadeSearch 
+                onSelect={setCidadeDestino}
+                placeholder="Todos os destinos"
+              />
+            </CityField>
+            
+            <InputField>
+              <label>Data Início (a partir de)</label>
+              <input
+                type="date"
+                value={filters.dataInicio}
+                onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
+              />
+            </InputField>
+            
+            <InputField>
+              <label>Data Fim (até)</label>
+              <input
+                type="date"
+                value={filters.dataFim}
+                onChange={(e) => handleFilterChange('dataFim', e.target.value)}
+              />
+            </InputField>
+            
+            <InputField>
+              <label>Valor Mínimo (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={filters.valorMin}
+                onChange={(e) => handleFilterChange('valorMin', e.target.value)}
+              />
+            </InputField>
+            
+            <InputField>
+              <label>Valor Máximo (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={filters.valorMax}
+                onChange={(e) => handleFilterChange('valorMax', e.target.value)}
+              />
+            </InputField>
           </FilterGrid>
           
           <FilterActions>
             <Button outline onClick={limparFiltros}>
-              Limpar
+              Limpar Tudo
             </Button>
-            <Button onClick={aplicarFiltros}>
-              <FaSearch /> PESQUISAR
+            <Button onClick={handleSearch} disabled={loading}>
+              <FaSearch /> {loading ? 'Pesquisando...' : 'PESQUISAR'}
             </Button>
           </FilterActions>
         </FilterSection>
 
         <ResultsSection>
           <ResultsHeader>
-            <h2>Resultados ({filteredViagens.length})</h2>
+            <h2>Resultados ({viagens.length})</h2>
             <span>viagens encontradas</span>
           </ResultsHeader>
           
@@ -423,20 +464,21 @@ export const PesquisarViagens = () => {
             </ActiveFilters>
           )}
           
-          {filteredViagens.length === 0 ? (
+          {viagens.length === 0 ? (
             <EmptyState>
               <FaSearch />
               <p>Nenhuma viagem encontrada com os filtros selecionados.</p>
+              <small>Tente ajustar os filtros ou cadastrar uma nova viagem.</small>
             </EmptyState>
           ) : (
-            filteredViagens.map(viagem => (
-              <ViagemCard key={viagem.id} onClick={() => navigate(`/viagem/${viagem.id}`)}>
+            viagens.map(viagem => (
+              <ViagemCard key={viagem.id_viagem} onClick={() => navigate(`/viagem/${viagem.id_viagem}`)}>
                 <ViagemHeader>
                   <ViagemRoute>
                     <FaMapMarkerAlt />
                     {viagem.cidade_saida || 'Origem'} → {viagem.cidade_chegada || 'Destino'}
                   </ViagemRoute>
-                  <ViagemValue>{formatarMoeda(viagem.total_liquido || 0)}</ViagemValue>
+                  <ViagemValue>{formatarMoeda(viagem.total_liquido)}</ViagemValue>
                 </ViagemHeader>
                 <ViagemDetails>
                   <DetailItem>
@@ -448,9 +490,9 @@ export const PesquisarViagens = () => {
                       📊 KM: {viagem.km_saida} - {viagem.km_entrada}
                     </DetailItem>
                   )}
-                  {viagem.pesoSaida && (
+                  {viagem.peso_saida && (
                     <DetailItem>
-                      ⚖️ {viagem.pesoSaida} kg
+                      ⚖️ {viagem.peso_saida} toneladas
                     </DetailItem>
                   )}
                 </ViagemDetails>
@@ -462,3 +504,5 @@ export const PesquisarViagens = () => {
     </Container>
   );
 };
+
+export default PesquisarViagens;

@@ -60,8 +60,14 @@ export const LandingPage = () => {
   const { loginSimulado } = useAuth();
 
   const acessoRapido = () => {
-    loginSimulado();
-    navigate('/home');
+    if (loginSimulado) {
+      loginSimulado();
+      navigate('/home');
+    } else {
+      console.error('loginSimulado não está disponível');
+      // Fallback: redirecionar para login
+      navigate('/login');
+    }
   };
 
   return (
@@ -87,7 +93,7 @@ export const LandingPage = () => {
           </Button>
         </ButtonContainer>
         <DemoBadge>
-          🔧 Pré-visualização ao vivo em carregamento, as interações podem não ser salvas
+          🔧 Modo de demonstração - As informações não serão salvas permanentemente
         </DemoBadge>
       </Content>
     </Container>
