@@ -396,6 +396,7 @@ export const NovaViagem = () => {
       <Content>
         <PageTitle>Cadastro de Viagem</PageTitle>
         
+        {/* Dados da Viagem */}
         <FormSection>
           <SectionTitle>
             <FaCalculator /> Dados da Viagem
@@ -495,9 +496,268 @@ export const NovaViagem = () => {
           </FormRow>
         </FormSection>
         
-        {/* Abastecimento, Oficina, Pedágio, Outros sections... */}
-        {/* (mantenha as mesmas seções do código anterior) */}
+        {/* Abastecimento */}
+        <FormSection>
+          <SectionTitle>
+            <FaGasPump /> Abastecimento
+          </SectionTitle>
+          
+          <TableContainer>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>KM</th>
+                  <th>Posto</th>
+                  <th>Litros</th>
+                  <th>Valor/Litro (R$)</th>
+                  <th>Valor Total (R$)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {abastecimentos.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <input
+                        type="date"
+                        value={item.data}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'data', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={item.km}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'km', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        placeholder="Posto"
+                        value={item.posto}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'posto', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        value={item.litros}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'litros', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        value={item.valorLitros}
+                        onChange={(e) => handleAbastecimentoChange(item.id, 'valorLitros', e.target.value)}
+                      />
+                    </td>
+                    <td>{formatCurrency(item.total)}</td>
+                    <td>
+                      <ActionButton onClick={() => handleRemoveAbastecimento(item.id)}>
+                        <FaTrash />
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableContainer>
+          
+          <AddButton onClick={handleAddAbastecimento}>
+            <FaPlus /> Adicionar linha
+          </AddButton>
+          
+          <TotalRow>Total: {formatCurrency(totalAbastecimentos)}</TotalRow>
+        </FormSection>
         
+        {/* Oficina */}
+        <FormSection>
+          <SectionTitle>
+            <FaWrench /> Oficina
+          </SectionTitle>
+          
+          <TableContainer>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>KM</th>
+                  <th>Tipo</th>
+                  <th>Valor (R$)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {oficinas.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <input
+                        type="date"
+                        value={item.data}
+                        onChange={(e) => handleOficinaChange(item.id, 'data', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={item.km}
+                        onChange={(e) => handleOficinaChange(item.id, 'km', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <select value={item.tipo} onChange={(e) => handleOficinaChange(item.id, 'tipo', e.target.value)}>
+                        <option value="">Selecione</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="pneu">Pneu</option>
+                        <option value="oleo">Troca de Óleo</option>
+                        <option value="motor">Motor</option>
+                        <option value="outros">Outros</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={item.preco}
+                        onChange={(e) => handleOficinaChange(item.id, 'preco', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <ActionButton onClick={() => handleRemoveOficina(item.id)}>
+                        <FaTrash />
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableContainer>
+          
+          <AddButton onClick={handleAddOficina}>
+            <FaPlus /> Adicionar linha
+          </AddButton>
+          
+          <TotalRow>Total Pago: {formatCurrency(totalOficinas)}</TotalRow>
+        </FormSection>
+        
+        {/* Pedágio */}
+        <FormSection>
+          <SectionTitle>
+            <FaRoad /> Pedágio
+          </SectionTitle>
+          
+          {pedagios.map(item => (
+            <div key={item.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+              <Input
+                label="Valor do pedágio"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={item.valor}
+                onChange={(e) => handlePedagioChange(item.id, e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <ActionButton onClick={() => handleRemovePedagio(item.id)} style={{ marginTop: '24px' }}>
+                <FaTrash />
+              </ActionButton>
+            </div>
+          ))}
+          
+          <AddButton onClick={handleAddPedagio}>
+            <FaPlus /> Adicionar valor
+          </AddButton>
+          
+          <TotalRow>Total Pago: {formatCurrency(totalPedagios)}</TotalRow>
+        </FormSection>
+        
+        {/* Outros */}
+        <FormSection>
+          <SectionTitle>
+            <FaGift /> Outros
+          </SectionTitle>
+          
+          <div>
+            <ValueLabel>Houve falta de mercadoria?</ValueLabel>
+            <RadioGroup>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="faltaMercadoria"
+                  value="sim"
+                  checked={faltaMercadoria === 'sim'}
+                  onChange={(e) => setFaltaMercadoria(e.target.value)}
+                />
+                Sim
+              </RadioLabel>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="faltaMercadoria"
+                  value="nao"
+                  checked={faltaMercadoria === 'nao'}
+                  onChange={(e) => setFaltaMercadoria(e.target.value)}
+                />
+                Não
+              </RadioLabel>
+            </RadioGroup>
+          </div>
+          
+          {faltaMercadoria === 'sim' && (
+            <HalfRow>
+              <Input
+                label="Kilos de falta"
+                type="number"
+                placeholder="0"
+                value={kilosFalta}
+                onChange={(e) => setKilosFalta(e.target.value)}
+              />
+              <Input
+                label="Preço por kilo (R$)"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={precoFalta}
+                onChange={(e) => setPrecoFalta(e.target.value)}
+              />
+            </HalfRow>
+          )}
+          
+          <div style={{ marginTop: '20px' }}>
+            <ValueLabel>Gorjetas</ValueLabel>
+            {gorjetas.map(item => (
+              <div key={item.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Valor da gorjeta"
+                  value={item.valor}
+                  onChange={(e) => handleGorjetaChange(item.id, e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <ActionButton onClick={() => handleRemoveGorjeta(item.id)}>
+                  <FaTrash />
+                </ActionButton>
+              </div>
+            ))}
+            <AddButton onClick={handleAddGorjeta}>
+              <FaPlus /> Adicionar gorjeta
+            </AddButton>
+          </div>
+          
+          <TotalRow>Total: {formatCurrency(totalGorjetas)}</TotalRow>
+        </FormSection>
+        
+        {/* Resumo */}
         <FormSection>
           <SectionTitle>
             <FaCalculator /> Resumo
