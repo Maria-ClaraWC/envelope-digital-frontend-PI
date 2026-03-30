@@ -313,7 +313,7 @@ const PesquisarViagens = () => {
 
   const handleSearch = async () => {
     if (!cidadeOrigem && !cidadeDestino && !filters.dataInicio && !filters.dataFim && !filters.valorMin && !filters.valorMax) {
-      alert('Selecione pelo menos um filtro para pesquisar');
+      alert('⚠️ Selecione pelo menos um filtro para pesquisar');
       return;
     }
     
@@ -327,11 +327,26 @@ const PesquisarViagens = () => {
       if (filters.valorMin) params.valor_min = filters.valorMin;
       if (filters.valorMax) params.valor_max = filters.valorMax;
       
-      const response = await api.get('/viagens', { params });
-      aplicarFiltros(response.data);
+      // Tentar buscar da API primeiro
+      let responseData = [];
+      try {
+        const response = await api.get('/viagens', { params });
+        responseData = response.data;
+      } catch (apiError) {
+        console.warn('API não disponível, usando dados locais:', apiError);
+        // Fallback: buscar do localStorage
+        const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
+        responseData = viagensSalvas;
+      }
+      
+      aplicarFiltros(responseData);
+      
+      if (responseData.length === 0) {
+        alert('🔍 Nenhuma viagem encontrada com os filtros selecionados.');
+      }
     } catch (error) {
       console.error('Erro ao pesquisar viagens:', error);
-      alert(error.response?.data?.error || 'Erro ao pesquisar viagens');
+      alert('❌ Erro ao pesquisar viagens. Tente novamente.');
       setViagens([]);
     } finally {
       setLoading(false);
@@ -472,18 +487,21 @@ const PesquisarViagens = () => {
             </EmptyState>
           ) : (
             viagens.map(viagem => (
-              <ViagemCard key={viagem.id_viagem} onClick={() => navigate(`/viagem/${viagem.id_viagem}`)}>
+              <ViagemCard 
+                key={viagem.id_viagem || viagem.id || `viagem-${Math.random()}`} 
+                onClick={() => navigate(`/viagem/${viagem.id_viagem || viagem.id}`)}
+              >
                 <ViagemHeader>
                   <ViagemRoute>
                     <FaMapMarkerAlt />
                     {viagem.cidade_saida || 'Origem'} → {viagem.cidade_chegada || 'Destino'}
                   </ViagemRoute>
-                  <ViagemValue>{formatarMoeda(viagem.total_liquido)}</ViagemValue>
+                  <ViagemValue>{formatarMoeda(viagem.total_liquido || viagem.totalLiquido || 0)}</ViagemValue>
                 </ViagemHeader>
                 <ViagemDetails>
                   <DetailItem>
                     <FaCalendarAlt />
-                    {formatarData(viagem.data_entrada)}
+                    {formatarData(viagem.data_entrada || viagem.dataInicio)}
                   </DetailItem>
                   {viagem.km_saida && viagem.km_entrada && (
                     <DetailItem>

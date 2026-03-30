@@ -8,7 +8,7 @@ import { Input } from '../../components/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import CidadeSearchIBGE from '../../components/CidadeSearchIBGE';
 import api from '../../services/api';
-import { FaTrash, FaPlus, FaGasPump, FaWrench, FaRoad, FaGift, FaCalculator } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaGasPump, FaWrench, FaRoad, FaGift, FaCalculator, FaSave, FaTimes } from 'react-icons/fa';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -61,6 +61,10 @@ const HalfRow = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.md};
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ValueDisplay = styled.div`
@@ -126,6 +130,7 @@ const ActionButton = styled.button`
   
   &:hover {
     opacity: 0.7;
+    transform: scale(1.1);
   }
 `;
 
@@ -140,9 +145,11 @@ const AddButton = styled.button`
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
   margin-top: ${props => props.theme.spacing.sm};
+  transition: all 0.3s;
   
   &:hover {
     background-color: ${props => props.theme.colors.primary}10;
+    transform: translateY(-2px);
   }
 `;
 
@@ -181,6 +188,11 @@ const SummaryCard = styled.div`
   padding: ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.medium};
   text-align: center;
+  transition: transform 0.3s;
+  
+  &:hover {
+    transform: translateY(-4px);
+  }
 `;
 
 const SummaryValue = styled.div`
@@ -213,13 +225,48 @@ const CityField = styled.div`
   }
 `;
 
+const ErrorMessage = styled.div`
+  background-color: #ffebee;
+  color: #c62828;
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  border-left: 4px solid #c62828;
+`;
+
+const SuccessMessage = styled.div`
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  border-left: 4px solid #2e7d32;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  button {
+    background: none;
+    border: none;
+    color: #2e7d32;
+    cursor: pointer;
+    font-size: 1.2rem;
+    
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+`;
+
 export const NovaViagem = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   const [formData, setFormData] = useState({
-    dataInicio: '',
+    dataInicio: new Date().toISOString().split('T')[0],
     dataFim: '',
     kmSaida: '',
     kmChegada: '',
@@ -230,22 +277,18 @@ export const NovaViagem = () => {
     precoTonelada: '',
   });
   
-  // Abastecimentos
   const [abastecimentos, setAbastecimentos] = useState([
     { id: Date.now(), data: '', km: '', posto: '', litros: '', valorLitros: '', total: 0 }
   ]);
   
-  // Oficinas
   const [oficinas, setOficinas] = useState([
     { id: Date.now(), data: '', km: '', tipo: '', preco: '' }
   ]);
   
-  // Pedagios
   const [pedagios, setPedagios] = useState([
     { id: Date.now(), valor: '' }
   ]);
   
-  // Outros gastos
   const [faltaMercadoria, setFaltaMercadoria] = useState('nao');
   const [kilosFalta, setKilosFalta] = useState('');
   const [precoFalta, setPrecoFalta] = useState('');
@@ -253,7 +296,6 @@ export const NovaViagem = () => {
     { id: Date.now(), valor: '' }
   ]);
   
-  // Cálculos
   const precoTotal = (formData.pesoSaida * formData.precoTonelada) || 0;
   const adiantamento = precoTotal * 0.8;
   const ordemPagamento = precoTotal * 0.8;
@@ -261,7 +303,7 @@ export const NovaViagem = () => {
   const totalAbastecimentos = abastecimentos.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
   const totalOficinas = oficinas.reduce((sum, item) => sum + (Number(item.preco) || 0), 0);
   const totalPedagios = pedagios.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
-  const totalFaltaMercadoria = faltaMercadoria === 'sim' ? (kilosFalta * precoFalta) : 0;
+  const totalFaltaMercadoria = faltaMercadoria === 'sim' ? (Number(kilosFalta) || 0) * (Number(precoFalta) || 0) : 0;
   const totalGorjetas = gorjetas.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
   
   const totalGastos = totalAbastecimentos + totalOficinas + totalPedagios + totalFaltaMercadoria + totalGorjetas;
@@ -349,41 +391,132 @@ export const NovaViagem = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
   
+  const validateForm = () => {
+    if (!formData.cidadeSaida) {
+      setError('Por favor, selecione a cidade de origem');
+      return false;
+    }
+    if (!formData.cidadeChegada) {
+      setError('Por favor, selecione a cidade de destino');
+      return false;
+    }
+    if (!formData.dataInicio) {
+      setError('Por favor, informe a data de início da viagem');
+      return false;
+    }
+    if (!formData.pesoSaida || formData.pesoSaida <= 0) {
+      setError('Por favor, informe o peso da carga');
+      return false;
+    }
+    if (!formData.precoTonelada || formData.precoTonelada <= 0) {
+      setError('Por favor, informe o preço por tonelada');
+      return false;
+    }
+    return true;
+  };
+  
   const handleSubmit = async () => {
-    if (!formData.cidadeSaida || !formData.cidadeChegada) {
-      alert('Por favor, selecione as cidades de origem e destino');
+    setError('');
+    setSuccess('');
+    
+    if (!validateForm()) {
+      setTimeout(() => setError(''), 5000);
       return;
     }
     
     setLoading(true);
     
     try {
+      // Preparar dados no formato esperado pelo back-end
       const viagemData = {
         dataInicio: formData.dataInicio,
-        dataFim: formData.dataFim,
+        dataFim: formData.dataFim || formData.dataInicio,
         kmSaida: parseFloat(formData.kmSaida) || 0,
         kmChegada: parseFloat(formData.kmChegada) || 0,
-        cidadeSaida: formData.cidadeSaida.id,
-        cidadeChegada: formData.cidadeChegada.id,
+        // Enviar o objeto completo da cidade (o back-end vai processar)
+        cidadeSaida: formData.cidadeSaida,
+        cidadeChegada: formData.cidadeChegada,
         pesoSaida: parseFloat(formData.pesoSaida) || 0,
         pesoChegada: parseFloat(formData.pesoChegada) || 0,
         precoTonelada: parseFloat(formData.precoTonelada) || 0,
-        abastecimentos: abastecimentos.filter(a => a.data && a.litros),
-        oficinas: oficinas.filter(o => o.data && o.preco),
-        pedagios: pedagios.filter(p => p.valor),
-        gorjetas: gorjetas.filter(g => g.valor),
-        faltaMercadoria: faltaMercadoria === 'sim' ? { kilosFalta, precoFalta, total: totalFaltaMercadoria } : null,
+        abastecimentos: abastecimentos
+          .filter(a => a.data && a.litros && a.valorLitros)
+          .map(a => ({
+            data: a.data,
+            km: parseFloat(a.km) || 0,
+            posto: a.posto,
+            litros: parseFloat(a.litros) || 0,
+            valorLitros: parseFloat(a.valorLitros) || 0,
+            total: parseFloat(a.total) || 0
+          })),
+        oficinas: oficinas
+          .filter(o => o.data && o.preco)
+          .map(o => ({
+            data: o.data,
+            km: parseFloat(o.km) || 0,
+            tipo: o.tipo,
+            preco: parseFloat(o.preco) || 0
+          })),
+        pedagios: pedagios
+          .filter(p => p.valor)
+          .map(p => ({
+            valor: parseFloat(p.valor) || 0
+          })),
+        gorjetas: gorjetas
+          .filter(g => g.valor)
+          .map(g => ({
+            valor: parseFloat(g.valor) || 0
+          }))
       };
       
+      // Adicionar falta de mercadoria se houver
+      if (faltaMercadoria === 'sim' && kilosFalta && precoFalta) {
+        viagemData.faltaMercadoria = {
+          kilosFalta: parseFloat(kilosFalta) || 0,
+          precoFalta: parseFloat(precoFalta) || 0,
+          total: (parseFloat(kilosFalta) || 0) * (parseFloat(precoFalta) || 0)
+        };
+      }
+      
+      console.log('📤 Enviando para API:', viagemData);
+      
+      // Enviar para API
       const response = await api.post('/viagens', viagemData);
       
-      if (response.status === 201) {
-        alert('Viagem salva com sucesso!');
-        navigate('/home');
+      console.log('📥 Resposta da API:', response.data);
+      
+      // Verificar se a resposta indica sucesso
+      if (response.status === 201 || response.status === 200) {
+        // Exibir mensagem de sucesso
+        const successMessage = response.data.message || '✅ Viagem salva com sucesso!';
+        setSuccess(successMessage);
+        
+        // Limpar o formulário (opcional)
+        // Redirecionar após 2 segundos para o usuário ver a mensagem
+        setTimeout(() => {
+          navigate('/home');
+        }, 2000);
+      } else {
+        throw new Error('Resposta inesperada do servidor');
       }
+      
     } catch (error) {
-      console.error('Erro ao salvar viagem:', error);
-      alert(error.response?.data?.error || 'Erro ao salvar viagem. Tente novamente.');
+      console.error('❌ Erro detalhado:', error);
+      console.error('❌ Response:', error.response);
+      console.error('❌ Mensagem:', error.response?.data?.error);
+      
+      if (error.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else if (error.code === 'ERR_NETWORK') {
+        setError('Não foi possível conectar ao servidor. Verifique se o back-end está rodando na porta 3001.');
+      } else {
+        setError('Erro ao salvar viagem: ' + (error.message || 'Tente novamente.'));
+      }
+      
+      setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
     }
@@ -396,6 +529,14 @@ export const NovaViagem = () => {
       <Content>
         <PageTitle>Cadastro de Viagem</PageTitle>
         
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && (
+          <SuccessMessage>
+            <span>{success}</span>
+            <button onClick={() => setSuccess('')}>✕</button>
+          </SuccessMessage>
+        )}
+        
         {/* Dados da Viagem */}
         <FormSection>
           <SectionTitle>
@@ -404,10 +545,11 @@ export const NovaViagem = () => {
           
           <HalfRow>
             <Input
-              label="Data de Início"
+              label="Data de Início *"
               type="date"
               value={formData.dataInicio}
               onChange={(e) => handleInputChange('dataInicio', e.target.value)}
+              required
             />
             <Input
               label="Data de Fim"
@@ -443,7 +585,7 @@ export const NovaViagem = () => {
           </CityField>
           
           <CityField>
-            <label>Cidade de Fim *</label>
+            <label>Cidade de Destino *</label>
             <CidadeSearchIBGE 
               onSelect={handleCidadeChegadaSelect}
               placeholder="Digite o nome da cidade de destino..."
@@ -452,7 +594,7 @@ export const NovaViagem = () => {
           
           <HalfRow>
             <Input
-              label="Peso no Início (toneladas)"
+              label="Peso no Início (toneladas) *"
               type="number"
               step="0.1"
               placeholder="0"
@@ -471,7 +613,7 @@ export const NovaViagem = () => {
           
           <FormRow>
             <Input
-              label="Preço da Tonelada (R$)"
+              label="Preço da Tonelada (R$) *"
               type="number"
               step="0.01"
               placeholder="0,00"
@@ -760,7 +902,7 @@ export const NovaViagem = () => {
         {/* Resumo */}
         <FormSection>
           <SectionTitle>
-            <FaCalculator /> Resumo
+            <FaCalculator /> Resumo Financeiro
           </SectionTitle>
           
           <SummaryGrid>
@@ -769,7 +911,7 @@ export const NovaViagem = () => {
               <SummaryValue>{formatCurrency(precoTotal)}</SummaryValue>
             </SummaryCard>
             <SummaryCard>
-              <SummaryLabel>Total Bruto de Gastos</SummaryLabel>
+              <SummaryLabel>Total de Gastos</SummaryLabel>
               <SummaryValue>{formatCurrency(totalGastos)}</SummaryValue>
             </SummaryCard>
             <SummaryCard>
@@ -785,10 +927,10 @@ export const NovaViagem = () => {
         
         <ButtonGroup>
           <Button outline onClick={() => navigate('/home')}>
-            Cancelar
+            <FaTimes /> Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar Viagem'}
+            <FaSave /> {loading ? 'Salvando...' : 'Salvar Viagem'}
           </Button>
         </ButtonGroup>
       </Content>

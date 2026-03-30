@@ -6,8 +6,6 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { useAuth } from '../../contexts/AuthContext';
-import { masks } from '../../utils/masks';
-import { validators } from '../../utils/validators';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -54,51 +52,17 @@ const StyledLink = styled(Link)`
   }
 `;
 
-const Divider = styled.div`
-  display: flex;
-  align-items: center;
+const ErrorMessage = styled.div`
+  color: ${props => props.theme.colors.error};
   text-align: center;
-  margin: ${props => props.theme.spacing.lg} 0;
-  
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid ${props => props.theme.colors.background};
-  }
-  
-  span {
-    margin: 0 ${props => props.theme.spacing.md};
-    color: ${props => props.theme.colors.darkGray};
-    font-size: ${props => props.theme.fontSizes.small};
-  }
-`;
-
-const CpfLoginButton = styled(Button)`
-  background-color: ${props => props.theme.colors.primary};
-  margin-top: ${props => props.theme.spacing.sm};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.primaryDark};
-  }
-`;
-
-const DemoButton = styled(Button)`
-  margin-top: ${props => props.theme.spacing.md};
-  background-color: ${props => props.theme.colors.success};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.success}cc;
-  }
+  font-size: ${props => props.theme.fontSizes.small};
 `;
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginSimulado } = useAuth();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cpfLogin, setCpfLogin] = useState('');
-  const [cpfLoading, setCpfLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -115,50 +79,6 @@ export const Login = () => {
     }
     
     setLoading(false);
-  };
-
-  const handleCpfLogin = async () => {
-    if (!cpfLogin) {
-      setError('Digite um CPF válido');
-      return;
-    }
-    
-    const cpfLimpo = cpfLogin.replace(/\D/g, '');
-    if (!validators.isValidCPF(cpfLimpo)) {
-      setError('CPF inválido');
-      return;
-    }
-    
-    setCpfLoading(true);
-    setError('');
-    
-    try {
-      const result = await login(cpfLimpo, '123456');
-      
-      if (result.success) {
-        navigate('/home');
-      } else {
-        setError('CPF não encontrado. Faça o cadastro primeiro.');
-      }
-    } catch (err) {
-      setError('Erro ao fazer login. Tente novamente.');
-    } finally {
-      setCpfLoading(false);
-    }
-  };
-
-  const handleDemoAccess = () => {
-    if (loginSimulado) {
-      loginSimulado();
-      navigate('/home');
-    } else {
-      // Fallback
-      onSubmit({ login: 'demo@demo.com', senha: '123456' });
-    }
-  };
-
-  const handleCpfChange = (e) => {
-    setCpfLogin(masks.cpf(e.target.value));
   };
 
   return (
@@ -186,39 +106,12 @@ export const Login = () => {
             error={errors.senha?.message}
           />
 
-          {error && (
-            <span style={{ color: '#FF6B6B', fontSize: '0.875rem', textAlign: 'center' }}>
-              {error}
-            </span>
-          )}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
 
           <Button type="submit" fullWidth disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>
         </Form>
-
-        <Divider>
-          <span>ou</span>
-        </Divider>
-
-        <Input
-          label="Login com CPF"
-          placeholder="000.000.000-00"
-          value={cpfLogin}
-          onChange={handleCpfChange}
-        />
-        <CpfLoginButton 
-          type="button" 
-          fullWidth 
-          onClick={handleCpfLogin}
-          disabled={cpfLoading}
-        >
-          {cpfLoading ? 'Verificando...' : '🔑 Entrar com CPF'}
-        </CpfLoginButton>
-
-        <DemoButton type="button" fullWidth onClick={handleDemoAccess}>
-          ⚡ Acesso Rápido (Demonstração)
-        </DemoButton>
 
         <StyledLink to="/register">
           Não tem uma conta? Cadastre-se

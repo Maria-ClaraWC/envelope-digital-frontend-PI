@@ -10,7 +10,8 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
 import { NovaViagem } from './pages/NovaViagem';
-import PesquisarViagens from './pages/PesquisarViagens'; // Importa o index.js
+import PesquisarViagens from './pages/PesquisarViagens';
+import DetalhesViagem from './pages/DetalhesViagem';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -52,6 +53,14 @@ function AppRoutes() {
           </PrivateRoute>
         } 
       />
+      <Route 
+        path="/viagem/:id" 
+        element={
+          <PrivateRoute>
+            <DetalhesViagem />
+          </PrivateRoute>
+        } 
+      />
     </Routes>
   );
 }
@@ -61,7 +70,12 @@ function App() {
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <AuthProvider>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <AppRoutes />
         </Router>
       </AuthProvider>

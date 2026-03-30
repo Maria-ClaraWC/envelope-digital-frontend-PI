@@ -126,3 +126,5 @@ export const useAlert = () => {
 
   return { addAlert, AlertComponent };
 };
+
+export default Alert;

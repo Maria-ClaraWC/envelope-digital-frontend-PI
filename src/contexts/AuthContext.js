@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
 
@@ -32,6 +33,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      console.error('Erro no login:', error);
       return { 
         success: false, 
         error: error.response?.data?.error || 'Erro ao fazer login' 
@@ -41,7 +43,17 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await api.post('/auth/register', userData);
+      // Mapear os campos para o que o back-end espera
+      const payload = {
+        nome: userData.nome,
+        cpf: userData.cpf,
+        cnh: userData.cnh,
+        placa: userData.placa,
+        email: userData.email,
+        senha: userData.senha
+      };
+      
+      const response = await api.post('/auth/register', payload);
       const { user, token } = response.data;
       
       localStorage.setItem('token', token);
@@ -51,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      console.error('Erro no registro:', error);
       return { 
         success: false, 
         error: error.response?.data?.error || 'Erro ao cadastrar' 
@@ -65,20 +78,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // Função de login simulado para desenvolvimento/demo
+  // Login de demonstração (apenas para teste)
   const loginSimulado = () => {
-    const userSimulado = {
-      id: 1,
-      nome: 'Usuário Demo',
-      email: 'demo@envelopedigital.com',
-      cpf: '000.000.000-00'
-    };
-    const tokenSimulado = 'demo-token-123456';
-    
-    localStorage.setItem('token', tokenSimulado);
-    localStorage.setItem('user', JSON.stringify(userSimulado));
-    api.defaults.headers.Authorization = `Bearer ${tokenSimulado}`;
-    setUser(userSimulado);
+    // Tenta fazer login com credenciais de demonstração
+    login('demo@envelopedigital.com', '123456');
   };
 
   return (
@@ -88,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       login, 
       register, 
       logout,
-      loginSimulado  // Adicionado aqui
+      loginSimulado
     }}>
       {children}
     </AuthContext.Provider>

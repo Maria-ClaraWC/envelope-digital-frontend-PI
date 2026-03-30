@@ -1,9 +1,11 @@
+// src/pages/Register/index.js
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { useAuth } from '../../contexts/AuthContext';
 import { masks } from '../../utils/masks';
 import { validators } from '../../utils/validators';
 
@@ -52,34 +54,37 @@ const StyledLink = styled(Link)`
   }
 `;
 
-const DemoNote = styled.div`
-  margin-top: ${props => props.theme.spacing.md};
-  padding: ${props => props.theme.spacing.sm};
-  background-color: ${props => props.theme.colors.background};
-  border-radius: ${props => props.theme.borderRadius.small};
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.darkGray};
+const ErrorMessage = styled.div`
+  color: ${props => props.theme.colors.error};
   text-align: center;
+  font-size: ${props => props.theme.fontSizes.small};
+  margin-top: ${props => props.theme.spacing.sm};
 `;
 
 export const Register = () => {
   const navigate = useNavigate();
+  const { register: registerUser } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const password = watch('senha');
 
   const onSubmit = async (data) => {
     setLoading(true);
+    setError('');
     
     try {
-      // Simular cadastro
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Cadastro realizado com sucesso!');
-      navigate('/login');
-    } catch (error) {
-      console.error('Erro no cadastro:', error);
-      alert('Erro ao cadastrar. Tente novamente.');
+      const result = await registerUser(data);
+      
+      if (result.success) {
+        alert('✅ Cadastro realizado com sucesso!');
+        navigate('/home');
+      } else {
+        setError(result.error || 'Erro ao cadastrar. Tente novamente.');
+      }
+    } catch (err) {
+      setError('Erro ao conectar com o servidor. Verifique se o back-end está rodando.');
     } finally {
       setLoading(false);
     }
@@ -175,6 +180,8 @@ export const Register = () => {
             error={errors.senha?.message}
           />
 
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <Button type="submit" fullWidth disabled={loading}>
             {loading ? 'Cadastrando...' : 'Cadastrar'}
           </Button>
@@ -183,10 +190,6 @@ export const Register = () => {
         <StyledLink to="/login">
           Já tem uma conta? Fazer login
         </StyledLink>
-        
-        <DemoNote>
-          📝 Pré-visualização ao vivo em carregamento, as interações podem não ser salvas
-        </DemoNote>
       </RegisterCard>
     </Container>
   );

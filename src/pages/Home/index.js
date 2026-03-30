@@ -1,4 +1,4 @@
-// pages/Home/index.js
+// src/pages/Home/index.js
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,9 @@ import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../services/api';
+
+// ============ ESTILOS (adicione todos os estilos que estavam faltando) ============
 
 const Container = styled.div`
   min-height: 100vh;
@@ -17,6 +20,13 @@ const Content = styled.main`
   max-width: 1200px;
   margin: 0 auto;
   padding: ${props => props.theme.spacing.xl};
+`;
+
+const LoadingContainer = styled.div`
+  text-align: center;
+  padding: ${props => props.theme.spacing.xxl};
+  font-size: ${props => props.theme.fontSizes.large};
+  color: ${props => props.theme.colors.primary};
 `;
 
 const WelcomeSection = styled.div`
@@ -37,6 +47,32 @@ const WelcomeTitle = styled.h1`
 const WelcomeSubtitle = styled.p`
   color: ${props => props.theme.colors.darkGray};
   font-size: ${props => props.theme.fontSizes.medium};
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.xl};
+`;
+
+const StatCard = styled.div`
+  background: ${props => props.theme.colors.primary};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  padding: ${props => props.theme.spacing.lg};
+  color: ${props => props.theme.colors.white};
+  text-align: center;
+  
+  h3 {
+    font-size: ${props => props.theme.fontSizes.xlarge};
+    font-weight: 700;
+    margin-bottom: ${props => props.theme.spacing.xs};
+  }
+  
+  p {
+    font-size: ${props => props.theme.fontSizes.small};
+    opacity: 0.9;
+  }
 `;
 
 const ActionGrid = styled.div`
@@ -161,71 +197,39 @@ const ViagemValue = styled.div`
   font-size: ${props => props.theme.fontSizes.large};
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.xl};
-`;
-
-const StatCard = styled.div`
-  background: ${props => props.theme.colors.primary};
-  border-radius: ${props => props.theme.borderRadius.medium};
-  padding: ${props => props.theme.spacing.lg};
-  color: ${props => props.theme.colors.white};
-  text-align: center;
-  
-  h3 {
-    font-size: ${props => props.theme.fontSizes.xlarge};
-    font-weight: 700;
-    margin-bottom: ${props => props.theme.spacing.xs};
-  }
-  
-  p {
-    font-size: ${props => props.theme.fontSizes.small};
-    opacity: 0.9;
-  }
-`;
-
-// Dados simulados
-const viagensSimuladas = [
-  {
-    id: 1,
-    cidade_saida: 'São Paulo',
-    cidade_chegada: 'Rio de Janeiro',
-    data_entrada: '2024-03-15',
-    total_liquido: 8500
-  },
-  {
-    id: 2,
-    cidade_saida: 'Curitiba',
-    cidade_chegada: 'Porto Alegre',
-    data_entrada: '2024-03-10',
-    total_liquido: 7200
-  }
-];
+// ============ COMPONENTE HOME ============
 
 export const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [viagens, setViagens] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalViagens: 0, totalRecebido: 0, mediaViagem: 0 });
 
   useEffect(() => {
     carregarViagens();
   }, []);
 
-  const carregarViagens = () => {
-    const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
-    const viagensParaExibir = viagensSalvas.length > 0 ? viagensSalvas.slice(-3) : viagensSimuladas;
-    setViagens(viagensParaExibir);
-    
-    const totalRecebido = viagensParaExibir.reduce((sum, v) => sum + (v.total_liquido || 0), 0);
-    setStats({
-      totalViagens: viagensParaExibir.length,
-      totalRecebido,
-      mediaViagem: viagensParaExibir.length > 0 ? totalRecebido / viagensParaExibir.length : 0
-    });
+  const carregarViagens = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/viagens');
+      const viagensData = response.data || [];
+      
+      setViagens(viagensData.slice(-5));
+      
+      const totalRecebido = viagensData.reduce((sum, v) => sum + (v.total_liquido || 0), 0);
+      setStats({
+        totalViagens: viagensData.length,
+        totalRecebido,
+        mediaViagem: viagensData.length > 0 ? totalRecebido / viagensData.length : 0
+      });
+    } catch (error) {
+      console.error('Erro ao carregar viagens:', error);
+      setViagens([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatarData = (data) => {
@@ -234,7 +238,7 @@ export const Home = () => {
   };
 
   const formatarMoeda = (valor) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
   const acoes = [
@@ -252,11 +256,22 @@ export const Home = () => {
     },
     {
       icon: <FaChartLine />,
-      title: 'Relatórios',
+      title: 'Meus Resultados',
       description: 'Visualize seus ganhos e estatísticas',
       onClick: () => navigate('/pesquisar-viagens')
     }
   ];
+
+  if (loading) {
+    return (
+      <Container>
+        <Header />
+        <Content>
+          <LoadingContainer>🔄 Carregando suas viagens...</LoadingContainer>
+        </Content>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -318,9 +333,9 @@ export const Home = () => {
           ) : (
             <ViagemList>
               {viagens.map(viagem => (
-                <ViagemItem key={viagem.id} onClick={() => navigate(`/viagem/${viagem.id}`)}>
+                <ViagemItem key={viagem.id_viagem} onClick={() => navigate(`/viagem/${viagem.id_viagem}`)}>
                   <ViagemInfo>
-                    <h4>{viagem.cidade_saida} → {viagem.cidade_chegada}</h4>
+                    <h4>{viagem.cidade_saida || 'Origem'} → {viagem.cidade_chegada || 'Destino'}</h4>
                     <p>📅 {formatarData(viagem.data_entrada)}</p>
                   </ViagemInfo>
                   <ViagemValue>{formatarMoeda(viagem.total_liquido || 0)}</ViagemValue>
