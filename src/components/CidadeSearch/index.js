@@ -1,19 +1,7 @@
+// src/components/CidadeSearch/index.js
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-
-const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="10" cy="10" r="7" />
-    <line x1="21" y1="21" x2="15" y2="15" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
+import { FaSearch, FaTimes, FaCity, FaMapMarkerAlt } from 'react-icons/fa';
 
 const SearchContainer = styled.div`
   position: relative;
@@ -29,15 +17,20 @@ const SearchInputWrapper = styled.div`
 const SearchIconWrapper = styled.div`
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #999;
   pointer-events: none;
   display: flex;
   align-items: center;
+  z-index: 1;
 `;
 
 const ClearButton = styled.button`
   position: absolute;
   right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
@@ -46,6 +39,7 @@ const ClearButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
   
   &:hover {
     color: #666;
@@ -85,10 +79,13 @@ const SuggestionsList = styled.ul`
 `;
 
 const SuggestionItem = styled.li`
-  padding: 10px 12px;
+  padding: 12px;
   cursor: pointer;
   transition: background 0.2s;
   border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   
   &:hover {
     background: #f5f5f5;
@@ -99,21 +96,29 @@ const SuggestionItem = styled.li`
   }
 `;
 
-const CityName = styled.span`
+const CityInfo = styled.div`
+  flex: 1;
+`;
+
+const CityName = styled.div`
   font-weight: 500;
   color: #333;
 `;
 
-const State = styled.span`
-  margin-left: 8px;
+const CityState = styled.div`
+  font-size: 12px;
   color: #666;
-  font-size: 14px;
+  margin-top: 4px;
 `;
 
 const LoadingMessage = styled.div`
   padding: 12px;
   text-align: center;
   color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 `;
 
 const NoResults = styled.div`
@@ -124,7 +129,7 @@ const NoResults = styled.div`
 
 const CidadeSearch = ({ 
   onSelect, 
-  placeholder = "Digite o nome da cidade ou UF...",
+  placeholder = "Digite o nome da cidade...",
   initialValue = "",
   required = false,
   name 
@@ -135,7 +140,64 @@ const CidadeSearch = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCity, setSelectedCity] = useState(null);
   const wrapperRef = useRef(null);
+  const debounceTimer = useRef(null);
 
+  // Buscar cidades da API do IBGE
+  const searchCities = async (term) => {
+    if (!term || term.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Buscar diretamente da API do IBGE
+      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome&nome=${encodeURIComponent(term)}`);
+      const data = await response.json();
+      
+      if (data && Array.isArray(data)) {
+        const formattedCities = data.slice(0, 15).map(city => ({
+          id: city.id,
+          cidade: city.nome,
+          estado_sigla: city.microrregiao?.mesorregiao?.UF?.sigla || '',
+          estado_nome: city.microrregiao?.mesorregiao?.UF?.nome || ''
+        }));
+        setSuggestions(formattedCities);
+        setShowSuggestions(true);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar cidades:', error);
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounce para não fazer muitas requisições
+  useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    if (searchTerm.trim() && !selectedCity && searchTerm.length > 2) {
+      debounceTimer.current = setTimeout(() => {
+        searchCities(searchTerm);
+      }, 500);
+    } else if (!searchTerm.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+    
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // Fechar sugestões ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -146,49 +208,6 @@ const CidadeSearch = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (searchTerm.trim() && !selectedCity && searchTerm.length > 2) {
-        searchCities(searchTerm);
-      } else if (!searchTerm.trim()) {
-        setSuggestions([]);
-      }
-    }, 500);
-    
-    return () => clearTimeout(delayDebounce);
-  }, [searchTerm]);
-
-// Adicionar tratamento de erro para quando a API retorna apenas um objeto
-const searchCities = async (term) => {
-  setLoading(true);
-  try {
-    const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome&nome=${encodeURIComponent(term)}`);
-    const data = await response.json();
-    
-    // Se for um array vazio ou null
-    if (!data || !Array.isArray(data)) {
-      setSuggestions([]);
-      setShowSuggestions(true);
-      return;
-    }
-    
-    const formattedCities = data.slice(0, 20).map(city => ({
-      id: city.id,
-      cidade: city.nome,
-      estado_sigla: city.microrregiao?.mesorregiao?.UF?.sigla || '',
-      estado_nome: city.microrregiao?.mesorregiao?.UF?.nome || ''
-    }));
-    
-    setSuggestions(formattedCities);
-    setShowSuggestions(true);
-  } catch (error) {
-    console.error('Erro ao buscar cidades:', error);
-    setSuggestions([]);
-  } finally {
-    setLoading(false);
-  }
-};
 
   const handleSelectCity = (city) => {
     setSelectedCity(city);
@@ -203,7 +222,6 @@ const searchCities = async (term) => {
     const value = e.target.value;
     setSearchTerm(value);
     setSelectedCity(null);
-    setShowSuggestions(true);
     
     if (onSelect && !value.trim()) {
       onSelect(null);
@@ -224,13 +242,13 @@ const searchCities = async (term) => {
     <SearchContainer ref={wrapperRef}>
       <SearchInputWrapper>
         <SearchIconWrapper>
-          <SearchIcon />
+          <FaSearch size={18} />
         </SearchIconWrapper>
         <Input
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => searchTerm.trim() && setShowSuggestions(true)}
+          onFocus={() => searchTerm.trim() && !selectedCity && setShowSuggestions(true)}
           placeholder={placeholder}
           required={required}
           name={name}
@@ -238,7 +256,7 @@ const searchCities = async (term) => {
         />
         {searchTerm && (
           <ClearButton onClick={handleClear} type="button">
-            <CloseIcon />
+            <FaTimes size={16} />
           </ClearButton>
         )}
       </SearchInputWrapper>
@@ -247,13 +265,13 @@ const searchCities = async (term) => {
         <SuggestionsList>
           {loading && (
             <LoadingMessage>
-              <span>🔍 Buscando cidades...</span>
+              <FaCity /> Buscando cidades...
             </LoadingMessage>
           )}
           
           {!loading && suggestions.length === 0 && searchTerm.trim() && searchTerm.length > 2 && (
             <NoResults>
-              <span>😕 Nenhuma cidade encontrada</span>
+              <FaMapMarkerAlt /> Nenhuma cidade encontrada
             </NoResults>
           )}
           
@@ -262,14 +280,54 @@ const searchCities = async (term) => {
               key={city.id} 
               onClick={() => handleSelectCity(city)}
             >
-              <CityName>{city.cidade}</CityName>
-              <State>{city.estado_sigla}</State>
+              <FaCity size={18} color="#9A6767" />
+              <CityInfo>
+                <CityName>{city.cidade}</CityName>
+                <CityState>{city.estado_sigla}</CityState>
+              </CityInfo>
             </SuggestionItem>
           ))}
         </SuggestionsList>
       )}
+      
+      {selectedCity && (
+        <SelectedCity>
+          <span>
+            ✅ {selectedCity.cidade} - {selectedCity.estado_sigla}
+          </span>
+          <button onClick={handleClear}>
+            <FaTimes />
+          </button>
+        </SelectedCity>
+      )}
     </SearchContainer>
   );
 };
+
+const SelectedCity = styled.div`
+  background: #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  span {
+    font-size: 14px;
+    color: #333;
+  }
+  
+  button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    
+    &:hover {
+      color: #FF6B6B;
+    }
+  }
+`;
 
 export default CidadeSearch;

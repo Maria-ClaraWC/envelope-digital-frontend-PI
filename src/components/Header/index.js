@@ -1,7 +1,7 @@
 // components/Header/index.js
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FaUserCircle, FaArrowLeft, FaTruck } from 'react-icons/fa';
+import { FaUserCircle, FaArrowLeft, FaTruck, FaSignOutAlt } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -82,20 +82,77 @@ const UserIcon = styled(FaUserCircle)`
   color: ${props => props.theme.colors.primary};
 `;
 
+const LogoutMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: ${props => props.theme.colors.white};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  box-shadow: ${props => props.theme.shadows.medium};
+  padding: ${props => props.theme.spacing.sm};
+  margin-top: ${props => props.theme.spacing.xs};
+  min-width: 200px;
+  z-index: 1000;
+`;
+
+const LogoutButton = styled.button`
+  background-color: ${props => props.theme.colors.error};
+  color: white;
+  border: none;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.small};
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  width: 100%;
+  justify-content: center;
+  
+  &:hover {
+    background-color: #c62828;
+  }
+  
+  svg {
+    font-size: 1rem;
+  }
+`;
+
+const UserInfoContainer = styled.div`
+  position: relative;
+`;
+
 export const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [showLogoutMenu, setShowLogoutMenu] = useState(false);
   
   const showBackButton = location.pathname !== '/home' && 
                          location.pathname !== '/' && 
                          location.pathname !== '/login' && 
                          location.pathname !== '/register';
   
+  const handleUserClick = () => {
+    setShowLogoutMenu(!showLogoutMenu);
+  };
+  
   const handleLogout = () => {
     logout();
-    navigate('/');
+    window.location.href = 'http://localhost:3000/';
   };
+  
+  // Fechar menu quando clicar fora
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.user-info-container')) {
+        setShowLogoutMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   return (
     <HeaderContainer>
@@ -111,10 +168,20 @@ export const Header = () => {
         </Logo>
       </LeftSection>
       {user && (
-        <UserInfo onClick={handleLogout}>
-          <UserName>{user?.nome || 'Usuário'}</UserName>
-          <UserIcon />
-        </UserInfo>
+        <UserInfoContainer className="user-info-container">
+          <UserInfo onClick={handleUserClick}>
+            <UserName>{user?.nome || 'Usuário'}</UserName>
+            <UserIcon />
+          </UserInfo>
+          {showLogoutMenu && (
+            <LogoutMenu>
+              <LogoutButton onClick={handleLogout}>
+                <FaSignOutAlt />
+                Sair da conta
+              </LogoutButton>
+            </LogoutMenu>
+          )}
+        </UserInfoContainer>
       )}
     </HeaderContainer>
   );

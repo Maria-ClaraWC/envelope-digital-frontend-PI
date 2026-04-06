@@ -9,7 +9,7 @@ import { Button } from '../../components/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
-// ============ ESTILOS (adicione todos os estilos que estavam faltando) ============
+// ============ ESTILOS ============
 
 const Container = styled.div`
   min-height: 100vh;
@@ -218,7 +218,7 @@ export const Home = () => {
       
       setViagens(viagensData.slice(-5));
       
-      const totalRecebido = viagensData.reduce((sum, v) => sum + (v.total_liquido || 0), 0);
+      const totalRecebido = viagensData.reduce((sum, v) => sum + (Number(v.total_liquido) || 0), 0);
       setStats({
         totalViagens: viagensData.length,
         totalRecebido,
@@ -241,6 +241,7 @@ export const Home = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
 
+  // Ações disponíveis (removido o "Meus Resultados")
   const acoes = [
     {
       icon: <FaPlus />,
@@ -252,12 +253,6 @@ export const Home = () => {
       icon: <FaSearch />,
       title: 'Pesquisar Viagens',
       description: 'Busque viagens por período, rota ou valor',
-      onClick: () => navigate('/pesquisar-viagens')
-    },
-    {
-      icon: <FaChartLine />,
-      title: 'Meus Resultados',
-      description: 'Visualize seus ganhos e estatísticas',
       onClick: () => navigate('/pesquisar-viagens')
     }
   ];

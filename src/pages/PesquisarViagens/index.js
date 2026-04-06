@@ -1,13 +1,31 @@
 // src/pages/PesquisarViagens/index.js
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import CidadeSearch from '../../components/CidadeSearch';
+import CidadeSearchIBGE from '../../components/CidadeSearchIBGE';
 import api from '../../services/api';
-import { FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaFilter, FaTimes } from 'react-icons/fa';
+import { 
+  FaSearch, 
+  FaMapMarkerAlt, 
+  FaCalendarAlt, 
+  FaFilter, 
+  FaTimes, 
+  FaSort, 
+  FaSortUp, 
+  FaSortDown,
+  FaTruck,
+  FaMoneyBillWave,
+  FaRoad,
+  FaArrowLeft,
+  FaArrowRight,
+  FaWeightHanging,
+  FaClipboardList,
+  FaSpinner,
+  FaGlobeAmericas
+} from 'react-icons/fa';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -15,7 +33,7 @@ const Container = styled.div`
 `;
 
 const Content = styled.main`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: ${props => props.theme.spacing.xl};
 `;
@@ -32,6 +50,7 @@ const PageTitle = styled.h1`
 const PageSubtitle = styled.p`
   color: ${props => props.theme.colors.darkGray};
   margin-bottom: ${props => props.theme.spacing.xl};
+  font-size: ${props => props.theme.fontSizes.medium};
 `;
 
 const FilterSection = styled.div`
@@ -39,13 +58,26 @@ const FilterSection = styled.div`
   border-radius: ${props => props.theme.borderRadius.large};
   padding: ${props => props.theme.spacing.xl};
   margin-bottom: ${props => props.theme.spacing.xl};
-  box-shadow: ${props => props.theme.shadows.small};
+  box-shadow: ${props => props.theme.shadows.medium};
+`;
+
+const FilterHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${props => props.$expanded ? props.theme.spacing.lg : '0'};
+  cursor: pointer;
+  padding-bottom: ${props => props.$expanded ? props.theme.spacing.sm : '0'};
+  border-bottom: ${props => props.$expanded ? `2px solid ${props.theme.colors.primary}20` : 'none'};
+  
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const FilterTitle = styled.h3`
   font-size: ${props => props.theme.fontSizes.large};
   color: ${props => props.theme.colors.primary};
-  margin-bottom: ${props => props.theme.spacing.lg};
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.sm};
@@ -54,15 +86,67 @@ const FilterTitle = styled.h3`
 
 const FilterGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: ${props => props.theme.spacing.lg};
+  margin-top: ${props => props.theme.spacing.lg};
+  max-height: ${props => props.$expanded ? '2000px' : '0'};
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+`;
+
+const FilterGroup = styled.div`
+  background: ${props => props.theme.colors.background};
+  padding: ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.medium};
+`;
+
+const FilterGroupTitle = styled.div`
+  font-weight: 600;
+  color: ${props => props.theme.colors.primary};
+  margin-bottom: ${props => props.theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  font-size: ${props => props.theme.fontSizes.medium};
+  border-bottom: 1px solid ${props => props.theme.colors.primary}20;
+  padding-bottom: ${props => props.theme.spacing.xs};
 `;
 
 const FilterActions = styled.div`
   display: flex;
   gap: ${props => props.theme.spacing.md};
   justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: ${props => props.theme.spacing.lg};
+  padding-top: ${props => props.theme.spacing.md};
+  border-top: 1px solid ${props => props.theme.colors.gray};
+`;
+
+const InputField = styled.div`
+  margin-bottom: ${props => props.theme.spacing.md};
+  
+  label {
+    display: block;
+    margin-bottom: ${props => props.theme.spacing.xs};
+    font-weight: 500;
+    color: ${props => props.theme.colors.black};
+    font-size: ${props => props.theme.fontSizes.small};
+  }
+  
+  input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s;
+    
+    &:focus {
+      outline: none;
+      border-color: ${props => props.theme.colors.primary};
+      box-shadow: 0 0 0 2px rgba(154, 103, 103, 0.1);
+    }
+  }
 `;
 
 const ResultsSection = styled.div`
@@ -79,19 +163,54 @@ const ResultsHeader = styled.div`
   margin-bottom: ${props => props.theme.spacing.lg};
   padding-bottom: ${props => props.theme.spacing.md};
   border-bottom: 2px solid ${props => props.theme.colors.background};
+  flex-wrap: wrap;
+  gap: ${props => props.theme.spacing.md};
   
   h2 {
     font-size: ${props => props.theme.fontSizes.large};
     color: ${props => props.theme.colors.black};
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: ${props => props.theme.spacing.sm};
   }
   
   span {
-    background: ${props => props.theme.colors.background};
+    background: ${props => props.theme.colors.primary}10;
     padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
     border-radius: ${props => props.theme.borderRadius.small};
     font-size: ${props => props.theme.fontSizes.small};
-    color: ${props => props.theme.colors.darkGray};
+    color: ${props => props.theme.colors.primary};
+    font-weight: 600;
+  }
+`;
+
+const SortControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  flex-wrap: wrap;
+  margin-bottom: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${props => props.theme.colors.background};
+`;
+
+const SortButton = styled.button`
+  background: ${props => props.active ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.active ? props.theme.colors.white : props.theme.colors.darkGray};
+  border: 1px solid ${props => props.active ? props.theme.colors.primary : props.theme.colors.gray};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  font-size: ${props => props.theme.fontSizes.small};
+  border-radius: ${props => props.theme.borderRadius.small};
+  transition: all 0.3s;
+  
+  &:hover {
+    background: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.background};
+    transform: translateY(-2px);
   }
 `;
 
@@ -100,10 +219,12 @@ const ViagemCard = styled(Card)`
   margin-bottom: ${props => props.theme.spacing.md};
   cursor: pointer;
   transition: all 0.3s ease;
+  border-left: 4px solid transparent;
   
   &:hover {
     transform: translateX(4px);
     box-shadow: ${props => props.theme.shadows.medium};
+    border-left-color: ${props => props.theme.colors.primary};
   }
 `;
 
@@ -151,6 +272,9 @@ const DetailItem = styled.div`
   gap: ${props => props.theme.spacing.xs};
   font-size: ${props => props.theme.fontSizes.small};
   color: ${props => props.theme.colors.darkGray};
+  background: ${props => props.theme.colors.background};
+  padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.sm};
+  border-radius: ${props => props.theme.borderRadius.small};
   
   svg {
     color: ${props => props.theme.colors.primary};
@@ -163,7 +287,7 @@ const EmptyState = styled.div`
   color: ${props => props.theme.colors.darkGray};
   
   svg {
-    font-size: 3rem;
+    font-size: 4rem;
     margin-bottom: ${props => props.theme.spacing.md};
     opacity: 0.5;
     color: ${props => props.theme.colors.primary};
@@ -171,10 +295,7 @@ const EmptyState = styled.div`
   
   p {
     margin-bottom: ${props => props.theme.spacing.sm};
-  }
-  
-  small {
-    font-size: ${props => props.theme.fontSizes.small};
+    font-size: ${props => props.theme.fontSizes.large};
   }
 `;
 
@@ -183,22 +304,24 @@ const ActiveFilters = styled.div`
   flex-wrap: wrap;
   gap: ${props => props.theme.spacing.sm};
   margin-bottom: ${props => props.theme.spacing.lg};
+  padding-bottom: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${props => props.theme.colors.background};
 `;
 
 const FilterBadge = styled.span`
-  background: ${props => props.theme.colors.background};
+  background: ${props => props.theme.colors.primary}15;
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.small};
   font-size: ${props => props.theme.fontSizes.small};
-  color: ${props => props.theme.colors.black};
+  color: ${props => props.theme.colors.primary};
   display: inline-flex;
   align-items: center;
   gap: ${props => props.theme.spacing.xs};
+  font-weight: 500;
   
   svg {
     cursor: pointer;
-    font-size: 0.7rem;
-    color: ${props => props.theme.colors.darkGray};
+    font-size: 0.8rem;
     
     &:hover {
       color: ${props => props.theme.colors.error};
@@ -206,39 +329,76 @@ const FilterBadge = styled.span`
   }
 `;
 
-const CityField = styled.div`
-  margin-bottom: ${props => props.theme.spacing.md};
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  margin-top: ${props => props.theme.spacing.xl};
+  padding-top: ${props => props.theme.spacing.lg};
+  border-top: 1px solid ${props => props.theme.colors.background};
+  flex-wrap: wrap;
+`;
+
+const PageButton = styled.button`
+  background: ${props => props.active ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.active ? props.theme.colors.white : props.theme.colors.darkGray};
+  border: 1px solid ${props => props.active ? props.theme.colors.primary : props.theme.colors.gray};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  border-radius: ${props => props.theme.borderRadius.small};
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 40px;
   
-  label {
-    display: block;
-    margin-bottom: ${props => props.theme.spacing.xs};
-    font-weight: 500;
-    color: ${props => props.theme.colors.black};
+  &:hover:not(:disabled) {
+    background: ${props => props.active ? props.theme.colors.primaryDark : props.theme.colors.background};
+    transform: translateY(-2px);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
-const InputField = styled.div`
-  margin-bottom: ${props => props.theme.spacing.md};
+const StatsBar = styled.div`
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary} 0%, ${props => props.theme.colors.primaryDark} 100%);
+  color: white;
+  padding: ${props => props.theme.spacing.lg};
+  border-radius: ${props => props.theme.borderRadius.medium};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: ${props => props.theme.spacing.md};
   
-  label {
-    display: block;
-    margin-bottom: ${props => props.theme.spacing.xs};
-    font-weight: 500;
-    color: ${props => props.theme.colors.black};
+  div {
+    text-align: center;
+    
+    strong {
+      font-size: ${props => props.theme.fontSizes.xlarge};
+      display: block;
+      margin-bottom: ${props => props.theme.spacing.xs};
+    }
+    
+    span {
+      font-size: ${props => props.theme.fontSizes.small};
+      opacity: 0.9;
+    }
+  }
+`;
+
+const LoadingContainer = styled.div`
+  text-align: center;
+  padding: ${props => props.theme.spacing.xxl};
+  color: ${props => props.theme.colors.primary};
+  
+  svg {
+    animation: spin 1s linear infinite;
   }
   
-  input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px;
-    
-    &:focus {
-      outline: none;
-      border-color: #9A6767;
-      box-shadow: 0 0 0 2px rgba(154, 103, 103, 0.1);
-    }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 `;
 
@@ -256,101 +416,136 @@ const PesquisarViagens = () => {
   const [cidadeOrigem, setCidadeOrigem] = useState(null);
   const [cidadeDestino, setCidadeDestino] = useState(null);
   const [viagens, setViagens] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [filteredViagens, setFilteredViagens] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [sortField, setSortField] = useState('data_entrada');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [filters, setFilters] = useState({
     dataInicio: '',
     dataFim: '',
     valorMin: '',
-    valorMax: ''
+    valorMax: '',
+    kmMin: '',
+    kmMax: '',
+    pesoMin: '',
+    pesoMax: ''
   });
-  const [activeFilters, setActiveFilters] = useState([]);
 
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-  };
+  const carregarViagens = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/viagens');
+      setViagens(response.data || []);
+      setFilteredViagens(response.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar viagens:', error);
+      setViagens([]);
+      setFilteredViagens([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const aplicarFiltros = (resultados) => {
-    let resultado = [...resultados];
-    const novosActiveFilters = [];
+  useEffect(() => {
+    carregarViagens();
+  }, [carregarViagens]);
+
+  const aplicarFiltros = useCallback(() => {
+    let resultado = [...viagens];
     
-    if (cidadeOrigem) {
+    if (cidadeOrigem && cidadeOrigem.cidade) {
       resultado = resultado.filter(v => 
         v.cidade_saida?.toLowerCase().includes(cidadeOrigem.cidade?.toLowerCase())
       );
-      novosActiveFilters.push({ field: 'cidadeOrigem', label: `Origem: ${cidadeOrigem.cidade}` });
     }
     
-    if (cidadeDestino) {
+    if (cidadeDestino && cidadeDestino.cidade) {
       resultado = resultado.filter(v => 
         v.cidade_chegada?.toLowerCase().includes(cidadeDestino.cidade?.toLowerCase())
       );
-      novosActiveFilters.push({ field: 'cidadeDestino', label: `Destino: ${cidadeDestino.cidade}` });
     }
     
     if (filters.dataInicio) {
       resultado = resultado.filter(v => v.data_entrada >= filters.dataInicio);
-      novosActiveFilters.push({ field: 'dataInicio', label: `A partir de: ${formatarData(filters.dataInicio)}` });
     }
     
     if (filters.dataFim) {
       resultado = resultado.filter(v => v.data_entrada <= filters.dataFim);
-      novosActiveFilters.push({ field: 'dataFim', label: `Até: ${formatarData(filters.dataFim)}` });
     }
     
     if (filters.valorMin) {
-      resultado = resultado.filter(v => (v.total_liquido || 0) >= Number(filters.valorMin));
-      novosActiveFilters.push({ field: 'valorMin', label: `Valor min: ${formatarMoeda(filters.valorMin)}` });
+      resultado = resultado.filter(v => (Number(v.total_liquido) || 0) >= Number(filters.valorMin));
     }
     
     if (filters.valorMax) {
-      resultado = resultado.filter(v => (v.total_liquido || 0) <= Number(filters.valorMax));
-      novosActiveFilters.push({ field: 'valorMax', label: `Valor max: ${formatarMoeda(filters.valorMax)}` });
+      resultado = resultado.filter(v => (Number(v.total_liquido) || 0) <= Number(filters.valorMax));
     }
     
-    setViagens(resultado);
-    setActiveFilters(novosActiveFilters);
-  };
+    if (filters.kmMin) {
+      resultado = resultado.filter(v => (Number(v.km_saida) || 0) >= Number(filters.kmMin));
+    }
+    
+    if (filters.kmMax) {
+      resultado = resultado.filter(v => (Number(v.km_entrada) || 0) <= Number(filters.kmMax));
+    }
+    
+    if (filters.pesoMin) {
+      resultado = resultado.filter(v => (Number(v.peso_saida) || 0) >= Number(filters.pesoMin));
+    }
+    
+    if (filters.pesoMax) {
+      resultado = resultado.filter(v => (Number(v.peso_saida) || 0) <= Number(filters.pesoMax));
+    }
+    
+    resultado.sort((a, b) => {
+      let aVal, bVal;
+      
+      switch (sortField) {
+        case 'data_entrada':
+          aVal = new Date(a.data_entrada);
+          bVal = new Date(b.data_entrada);
+          break;
+        case 'total_liquido':
+          aVal = Number(a.total_liquido) || 0;
+          bVal = Number(b.total_liquido) || 0;
+          break;
+        case 'cidade_saida':
+          aVal = a.cidade_saida || '';
+          bVal = b.cidade_saida || '';
+          break;
+        case 'peso_saida':
+          aVal = Number(a.peso_saida) || 0;
+          bVal = Number(b.peso_saida) || 0;
+          break;
+        case 'km_total':
+          aVal = (Number(a.km_entrada) || 0) - (Number(a.km_saida) || 0);
+          bVal = (Number(b.km_entrada) || 0) - (Number(b.km_saida) || 0);
+          break;
+        default:
+          aVal = a[sortField] || 0;
+          bVal = b[sortField] || 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+    
+    setFilteredViagens(resultado);
+    setCurrentPage(1);
+  }, [viagens, cidadeOrigem, cidadeDestino, filters, sortField, sortOrder]);
 
-  const handleSearch = async () => {
-    if (!cidadeOrigem && !cidadeDestino && !filters.dataInicio && !filters.dataFim && !filters.valorMin && !filters.valorMax) {
-      alert('⚠️ Selecione pelo menos um filtro para pesquisar');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const params = {};
-      if (cidadeOrigem) params.id_saida = cidadeOrigem.id;
-      if (cidadeDestino) params.id_chegada = cidadeDestino.id;
-      if (filters.dataInicio) params.data_inicio = filters.dataInicio;
-      if (filters.dataFim) params.data_fim = filters.dataFim;
-      if (filters.valorMin) params.valor_min = filters.valorMin;
-      if (filters.valorMax) params.valor_max = filters.valorMax;
-      
-      // Tentar buscar da API primeiro
-      let responseData = [];
-      try {
-        const response = await api.get('/viagens', { params });
-        responseData = response.data;
-      } catch (apiError) {
-        console.warn('API não disponível, usando dados locais:', apiError);
-        // Fallback: buscar do localStorage
-        const viagensSalvas = JSON.parse(localStorage.getItem('@App:viagens') || '[]');
-        responseData = viagensSalvas;
-      }
-      
-      aplicarFiltros(responseData);
-      
-      if (responseData.length === 0) {
-        alert('🔍 Nenhuma viagem encontrada com os filtros selecionados.');
-      }
-    } catch (error) {
-      console.error('Erro ao pesquisar viagens:', error);
-      alert('❌ Erro ao pesquisar viagens. Tente novamente.');
-      setViagens([]);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    aplicarFiltros();
+  }, [aplicarFiltros]);
+
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
   };
 
   const limparFiltros = () => {
@@ -360,10 +555,14 @@ const PesquisarViagens = () => {
       dataInicio: '',
       dataFim: '',
       valorMin: '',
-      valorMax: ''
+      valorMax: '',
+      kmMin: '',
+      kmMax: '',
+      pesoMin: '',
+      pesoMax: ''
     });
-    setActiveFilters([]);
-    setViagens([]);
+    setSortField('data_entrada');
+    setSortOrder('desc');
   };
 
   const removerFiltro = (field) => {
@@ -374,8 +573,66 @@ const PesquisarViagens = () => {
     } else {
       setFilters(prev => ({ ...prev, [field]: '' }));
     }
-    setTimeout(() => handleSearch(), 100);
   };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return <FaSort size={12} />;
+    return sortOrder === 'asc' ? <FaSortUp size={12} /> : <FaSortDown size={12} />;
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredViagens.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredViagens.length / itemsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const calcularEstatisticas = () => {
+    const totalViagens = filteredViagens.length;
+    const totalValor = filteredViagens.reduce((sum, v) => sum + (Number(v.total_liquido) || 0), 0);
+    const totalPeso = filteredViagens.reduce((sum, v) => sum + (Number(v.peso_saida) || 0), 0);
+    const mediaValor = totalViagens > 0 ? totalValor / totalViagens : 0;
+    
+    return { totalViagens, totalValor, totalPeso, mediaValor };
+  };
+
+  const stats = calcularEstatisticas();
+
+  const activeFiltersList = [
+    cidadeOrigem && { id: 'cidadeOrigem', label: `📍 Origem: ${cidadeOrigem.cidade} - ${cidadeOrigem.estado_sigla}` },
+    cidadeDestino && { id: 'cidadeDestino', label: `📍 Destino: ${cidadeDestino.cidade} - ${cidadeDestino.estado_sigla}` },
+    filters.dataInicio && { id: 'dataInicio', label: `📅 A partir de: ${formatarData(filters.dataInicio)}` },
+    filters.dataFim && { id: 'dataFim', label: `📅 Até: ${formatarData(filters.dataFim)}` },
+    filters.valorMin && { id: 'valorMin', label: `💰 Valor min: ${formatarMoeda(filters.valorMin)}` },
+    filters.valorMax && { id: 'valorMax', label: `💰 Valor max: ${formatarMoeda(filters.valorMax)}` },
+    filters.kmMin && { id: 'kmMin', label: `📊 KM min: ${filters.kmMin}` },
+    filters.kmMax && { id: 'kmMax', label: `📊 KM max: ${filters.kmMax}` },
+    filters.pesoMin && { id: 'pesoMin', label: `⚖️ Peso min: ${filters.pesoMin}t` },
+    filters.pesoMax && { id: 'pesoMax', label: `⚖️ Peso max: ${filters.pesoMax}t` }
+  ].filter(Boolean);
+
+  if (loading) {
+    return (
+      <Container>
+        <Header />
+        <Content>
+          <LoadingContainer>
+            <FaSpinner size={48} />
+            <p>Carregando viagens...</p>
+          </LoadingContainer>
+        </Content>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -383,139 +640,312 @@ const PesquisarViagens = () => {
       
       <Content>
         <PageTitle>
-          <FaSearch /> Pesquisar Viagens
+          <FaSearch size={32} /> Pesquisar Viagens
         </PageTitle>
         <PageSubtitle>
-          Encontre viagens por rota, período ou valor
+          Encontre viagens por rota, período, valor ou quilometragem - Pesquise em todos os estados do Brasil
         </PageSubtitle>
 
         <FilterSection>
-          <FilterTitle>
-            <FaFilter /> Filtros de Pesquisa
-          </FilterTitle>
+          <FilterHeader $expanded={filtersExpanded} onClick={() => setFiltersExpanded(!filtersExpanded)}>
+            <FilterTitle>
+              <FaFilter size={20} /> Filtros de Pesquisa
+            </FilterTitle>
+            <span style={{ fontSize: '20px' }}>{filtersExpanded ? '▲' : '▼'}</span>
+          </FilterHeader>
           
-          <FilterGrid>
-            <CityField>
-              <label>Cidade de Origem</label>
-              <CidadeSearch 
+          <FilterGrid $expanded={filtersExpanded}>
+            <FilterGroup>
+              <FilterGroupTitle>
+                <FaGlobeAmericas size={16} /> Localização
+              </FilterGroupTitle>
+              <CidadeSearchIBGE 
                 onSelect={setCidadeOrigem}
-                placeholder="Todas as origens"
+                placeholder="Digite o nome da cidade de origem..."
+                label="Cidade de Origem"
               />
-            </CityField>
-            
-            <CityField>
-              <label>Cidade de Destino</label>
-              <CidadeSearch 
-                onSelect={setCidadeDestino}
-                placeholder="Todos os destinos"
-              />
-            </CityField>
-            
-            <InputField>
-              <label>Data Início (a partir de)</label>
-              <input
-                type="date"
-                value={filters.dataInicio}
-                onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
-              />
-            </InputField>
-            
-            <InputField>
-              <label>Data Fim (até)</label>
-              <input
-                type="date"
-                value={filters.dataFim}
-                onChange={(e) => handleFilterChange('dataFim', e.target.value)}
-              />
-            </InputField>
-            
-            <InputField>
-              <label>Valor Mínimo (R$)</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={filters.valorMin}
-                onChange={(e) => handleFilterChange('valorMin', e.target.value)}
-              />
-            </InputField>
-            
-            <InputField>
-              <label>Valor Máximo (R$)</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={filters.valorMax}
-                onChange={(e) => handleFilterChange('valorMax', e.target.value)}
-              />
-            </InputField>
+              <div style={{ marginTop: '16px' }}>
+                <CidadeSearchIBGE 
+                  onSelect={setCidadeDestino}
+                  placeholder="Digite o nome da cidade de destino..."
+                  label="Cidade de Destino"
+                />
+              </div>
+            </FilterGroup>
+
+            <FilterGroup>
+              <FilterGroupTitle>
+                <FaCalendarAlt size={16} /> Período
+              </FilterGroupTitle>
+              <InputField>
+                <label>Data Início (a partir de)</label>
+                <input
+                  type="date"
+                  value={filters.dataInicio}
+                  onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
+                />
+              </InputField>
+              <InputField>
+                <label>Data Fim (até)</label>
+                <input
+                  type="date"
+                  value={filters.dataFim}
+                  onChange={(e) => handleFilterChange('dataFim', e.target.value)}
+                />
+              </InputField>
+            </FilterGroup>
+
+            <FilterGroup>
+              <FilterGroupTitle>
+                <FaMoneyBillWave size={16} /> Valores
+              </FilterGroupTitle>
+              <InputField>
+                <label>Valor Mínimo (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={filters.valorMin}
+                  onChange={(e) => handleFilterChange('valorMin', e.target.value)}
+                />
+              </InputField>
+              <InputField>
+                <label>Valor Máximo (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={filters.valorMax}
+                  onChange={(e) => handleFilterChange('valorMax', e.target.value)}
+                />
+              </InputField>
+            </FilterGroup>
+
+            <FilterGroup>
+              <FilterGroupTitle>
+                <FaRoad size={16} /> Quilometragem
+              </FilterGroupTitle>
+              <InputField>
+                <label>KM Mínimo</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={filters.kmMin}
+                  onChange={(e) => handleFilterChange('kmMin', e.target.value)}
+                />
+              </InputField>
+              <InputField>
+                <label>KM Máximo</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={filters.kmMax}
+                  onChange={(e) => handleFilterChange('kmMax', e.target.value)}
+                />
+              </InputField>
+            </FilterGroup>
+
+            <FilterGroup>
+              <FilterGroupTitle>
+                <FaWeightHanging size={16} /> Peso da Carga
+              </FilterGroupTitle>
+              <InputField>
+                <label>Peso Mínimo (toneladas)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  value={filters.pesoMin}
+                  onChange={(e) => handleFilterChange('pesoMin', e.target.value)}
+                />
+              </InputField>
+              <InputField>
+                <label>Peso Máximo (toneladas)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  value={filters.pesoMax}
+                  onChange={(e) => handleFilterChange('pesoMax', e.target.value)}
+                />
+              </InputField>
+            </FilterGroup>
           </FilterGrid>
           
           <FilterActions>
             <Button outline onClick={limparFiltros}>
-              Limpar Tudo
-            </Button>
-            <Button onClick={handleSearch} disabled={loading}>
-              <FaSearch /> {loading ? 'Pesquisando...' : 'PESQUISAR'}
+              <FaTimes /> Limpar Tudo
             </Button>
           </FilterActions>
         </FilterSection>
 
+        {filteredViagens.length > 0 && (
+          <StatsBar>
+            <div>
+              <strong>{stats.totalViagens}</strong>
+              <span>Viagens Encontradas</span>
+            </div>
+            <div>
+              <strong>{formatarMoeda(stats.totalValor)}</strong>
+              <span>Valor Total</span>
+            </div>
+            <div>
+              <strong>{stats.totalPeso.toFixed(1)} t</strong>
+              <span>Peso Total</span>
+            </div>
+            <div>
+              <strong>{formatarMoeda(stats.mediaValor)}</strong>
+              <span>Média por Viagem</span>
+            </div>
+          </StatsBar>
+        )}
+
         <ResultsSection>
           <ResultsHeader>
-            <h2>Resultados ({viagens.length})</h2>
-            <span>viagens encontradas</span>
+            <h2>
+              <FaClipboardList /> Resultados 
+              <span>{filteredViagens.length} viagens</span>
+            </h2>
           </ResultsHeader>
           
-          {activeFilters.length > 0 && (
+          <SortControls>
+            <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>Ordenar por:</span>
+            <SortButton 
+              onClick={() => handleSort('data_entrada')}
+              active={sortField === 'data_entrada'}
+            >
+              <FaCalendarAlt size={12} /> Data {getSortIcon('data_entrada')}
+            </SortButton>
+            <SortButton 
+              onClick={() => handleSort('total_liquido')}
+              active={sortField === 'total_liquido'}
+            >
+              <FaMoneyBillWave size={12} /> Valor {getSortIcon('total_liquido')}
+            </SortButton>
+            <SortButton 
+              onClick={() => handleSort('cidade_saida')}
+              active={sortField === 'cidade_saida'}
+            >
+              <FaMapMarkerAlt size={12} /> Origem {getSortIcon('cidade_saida')}
+            </SortButton>
+            <SortButton 
+              onClick={() => handleSort('peso_saida')}
+              active={sortField === 'peso_saida'}
+            >
+              <FaWeightHanging size={12} /> Peso {getSortIcon('peso_saida')}
+            </SortButton>
+            <SortButton 
+              onClick={() => handleSort('km_total')}
+              active={sortField === 'km_total'}
+            >
+              <FaRoad size={12} /> KM Total {getSortIcon('km_total')}
+            </SortButton>
+          </SortControls>
+          
+          {activeFiltersList.length > 0 && (
             <ActiveFilters>
-              {activeFilters.map(filter => (
-                <FilterBadge key={filter.field}>
+              {activeFiltersList.map(filter => (
+                <FilterBadge key={filter.id}>
                   {filter.label}
-                  <FaTimes onClick={() => removerFiltro(filter.field)} />
+                  <FaTimes onClick={() => removerFiltro(filter.id)} />
                 </FilterBadge>
               ))}
             </ActiveFilters>
           )}
           
-          {viagens.length === 0 ? (
+          {currentItems.length === 0 ? (
             <EmptyState>
-              <FaSearch />
+              <FaSearch size={48} />
               <p>Nenhuma viagem encontrada com os filtros selecionados.</p>
-              <small>Tente ajustar os filtros ou cadastrar uma nova viagem.</small>
+              <div style={{ marginTop: '20px' }}>
+                <Button onClick={() => navigate('/nova-viagem')}>
+                  <FaTruck /> Cadastrar Nova Viagem
+                </Button>
+              </div>
             </EmptyState>
           ) : (
-            viagens.map(viagem => (
-              <ViagemCard 
-                key={viagem.id_viagem || viagem.id || `viagem-${Math.random()}`} 
-                onClick={() => navigate(`/viagem/${viagem.id_viagem || viagem.id}`)}
-              >
-                <ViagemHeader>
-                  <ViagemRoute>
-                    <FaMapMarkerAlt />
-                    {viagem.cidade_saida || 'Origem'} → {viagem.cidade_chegada || 'Destino'}
-                  </ViagemRoute>
-                  <ViagemValue>{formatarMoeda(viagem.total_liquido || viagem.totalLiquido || 0)}</ViagemValue>
-                </ViagemHeader>
-                <ViagemDetails>
-                  <DetailItem>
-                    <FaCalendarAlt />
-                    {formatarData(viagem.data_entrada || viagem.dataInicio)}
-                  </DetailItem>
-                  {viagem.km_saida && viagem.km_entrada && (
+            <>
+              {currentItems.map(viagem => (
+                <ViagemCard 
+                  key={viagem.id_viagem} 
+                  onClick={() => navigate(`/viagem/${viagem.id_viagem}`)}
+                >
+                  <ViagemHeader>
+                    <ViagemRoute>
+                      <FaMapMarkerAlt size={18} />
+                      {viagem.cidade_saida || 'Origem'} → {viagem.cidade_chegada || 'Destino'}
+                    </ViagemRoute>
+                    <ViagemValue>{formatarMoeda(viagem.total_liquido || 0)}</ViagemValue>
+                  </ViagemHeader>
+                  <ViagemDetails>
                     <DetailItem>
-                      📊 KM: {viagem.km_saida} - {viagem.km_entrada}
+                      <FaCalendarAlt size={12} />
+                      {formatarData(viagem.data_entrada)}
                     </DetailItem>
-                  )}
-                  {viagem.peso_saida && (
+                    {viagem.km_saida && viagem.km_entrada && (
+                      <DetailItem>
+                        <FaRoad size={12} />
+                        KM: {Math.round(viagem.km_saida)} - {Math.round(viagem.km_entrada)} 
+                        ({Math.round((viagem.km_entrada - viagem.km_saida))} km)
+                      </DetailItem>
+                    )}
+                    {viagem.peso_saida && (
+                      <DetailItem>
+                        <FaWeightHanging size={12} />
+                        {viagem.peso_saida} t
+                      </DetailItem>
+                    )}
                     <DetailItem>
-                      ⚖️ {viagem.peso_saida} toneladas
+                      <FaMoneyBillWave size={12} />
+                      {formatarMoeda(viagem.total_bruto || 0)} bruto
                     </DetailItem>
-                  )}
-                </ViagemDetails>
-              </ViagemCard>
-            ))
+                  </ViagemDetails>
+                </ViagemCard>
+              ))}
+              
+              {totalPages > 1 && (
+                <PaginationContainer>
+                  <PageButton 
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <FaArrowLeft /> Anterior
+                  </PageButton>
+                  
+                  {[...Array(Math.min(totalPages, 5)).keys()].map((_, index) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = index + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = index + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + index;
+                    } else {
+                      pageNumber = currentPage - 2 + index;
+                    }
+                    
+                    if (pageNumber < 1 || pageNumber > totalPages) return null;
+                    
+                    return (
+                      <PageButton
+                        key={pageNumber}
+                        onClick={() => paginate(pageNumber)}
+                        active={currentPage === pageNumber}
+                      >
+                        {pageNumber}
+                      </PageButton>
+                    );
+                  })}
+                  
+                  <PageButton 
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próximo <FaArrowRight />
+                  </PageButton>
+                </PaginationContainer>
+              )}
+            </>
           )}
         </ResultsSection>
       </Content>

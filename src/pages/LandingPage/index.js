@@ -3,7 +3,6 @@ import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/Button';
-import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -46,29 +45,8 @@ const ButtonContainer = styled.div`
   margin-top: ${props => props.theme.spacing.xl};
 `;
 
-const DemoBadge = styled.div`
-  margin-top: ${props => props.theme.spacing.lg};
-  padding: ${props => props.theme.spacing.sm};
-  background-color: ${props => props.theme.colors.background};
-  border-radius: ${props => props.theme.borderRadius.small};
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.darkGray};
-`;
-
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const { loginSimulado } = useAuth();
-
-  const acessoRapido = () => {
-    if (loginSimulado) {
-      loginSimulado();
-      navigate('/home');
-    } else {
-      console.error('loginSimulado não está disponível');
-      // Fallback: redirecionar para login
-      navigate('/login');
-    }
-  };
 
   return (
     <Container>
@@ -83,18 +61,6 @@ export const LandingPage = () => {
             Login
           </Button>
         </ButtonContainer>
-        <ButtonContainer>
-          <Button 
-            small 
-            onClick={acessoRapido}
-            style={{ background: '#9A6767', borderColor: '#9A6767' }}
-          >
-            🚀 Acesso Rápido (Demo)
-          </Button>
-        </ButtonContainer>
-        <DemoBadge>
-          🔧 Modo de demonstração - As informações não serão salvas permanentemente
-        </DemoBadge>
       </Content>
     </Container>
   );

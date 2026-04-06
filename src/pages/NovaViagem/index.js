@@ -307,7 +307,7 @@ export const NovaViagem = () => {
   const totalGorjetas = gorjetas.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
   
   const totalGastos = totalAbastecimentos + totalOficinas + totalPedagios + totalFaltaMercadoria + totalGorjetas;
-  const comissao = (precoTotal - totalGastos) * 0.1;
+  const comissao = precoTotal * 0.1;
   const totalLiquido = precoTotal - totalGastos - comissao;
   
   const handleInputChange = (field, value) => {

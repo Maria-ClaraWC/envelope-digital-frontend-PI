@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
 import { Button } from '../../components/Button';
 import api from '../../services/api';
-import { FaMapMarkerAlt, FaCalendarAlt, FaGasPump, FaWrench, FaRoad, FaArrowLeft } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaCalendarAlt, FaGasPump, FaWrench, FaRoad, FaArrowLeft, FaPrint, FaDownload } from 'react-icons/fa';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -34,6 +34,46 @@ const PageTitle = styled.h1`
     }
   }
 `;
+// Adicione após o PageTitle, antes dos FormSections:
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.xl};
+  justify-content: flex-end;
+`;
+
+const DeleteButton = styled(Button)`
+  background-color: ${props => props.theme.colors.error};
+  
+  &:hover {
+    background-color: #c62828;
+  }
+`;
+
+// Adicione a função de excluir:
+const handleDelete = async () => {
+  if (window.confirm('⚠️ Tem certeza que deseja excluir esta viagem? Esta ação não pode ser desfeita.')) {
+    try {
+      await api.delete(`/viagens/${id}`);
+      alert('✅ Viagem excluída com sucesso!');
+      navigate('/pesquisar-viagens');
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      alert('❌ Erro ao excluir viagem: ' + (error.response?.data?.error || 'Tente novamente'));
+    }
+  }
+};
+
+// Adicione no JSX, após o PageTitle:
+<ActionButtons>
+  <Button outline onClick={() => navigate(`/viagem/editar/${id}`)}>
+    ✏️ Editar Viagem
+  </Button>
+  <DeleteButton onClick={handleDelete}>
+    🗑️ Excluir Viagem
+  </DeleteButton>
+</ActionButtons>
 
 const FormSection = styled.section`
   background-color: ${props => props.theme.colors.white};
@@ -130,6 +170,58 @@ const formatarData = (data) => {
   return new Date(data).toLocaleDateString('pt-BR');
 };
 
+const imprimir = () => {
+  // Ocultar elementos desnecessários para impressão
+  const header = document.querySelector('header');
+  const actionButtons = document.querySelector('.action-buttons-top');
+  const backButton = document.querySelector('.back-button-print');
+  
+  if (header) header.style.display = 'none';
+  if (actionButtons) actionButtons.style.display = 'none';
+  if (backButton) backButton.style.display = 'none';
+  
+  // Imprimir
+  window.print();
+  
+  // Restaurar elementos após impressão
+  setTimeout(() => {
+    if (header) header.style.display = '';
+    if (actionButtons) actionButtons.style.display = '';
+    if (backButton) backButton.style.display = '';
+  }, 100);
+};
+
+const exportarCSV = () => {
+  const headers = ['Campo', 'Valor'];
+  const rows = [
+    ['ID da Viagem', viagem.id_viagem || ''],
+    ['Data', formatarData(viagem.data_entrada)],
+    ['Cidade de Saída', viagem.cidade_saida || ''],
+    ['Estado de Saída', viagem.estado_saida || ''],
+    ['Cidade de Chegada', viagem.cidade_chegada || ''],
+    ['Estado de Chegada', viagem.estado_chegada || ''],
+    ['KM Saída', viagem.km_saida || 0],
+    ['KM Chegada', viagem.km_entrada || 0],
+    ['Peso Saída (toneladas)', viagem.peso_saida || 0],
+    ['Preço por Tonelada', formatarMoeda(viagem.preco_tonelada || 0)],
+    ['Total Bruto', formatarMoeda((viagem.peso_saida || 0) * (viagem.preco_tonelada || 0))],
+    ['Total de Gastos', formatarMoeda(viagem.total_gastos || 0)],
+    ['Comissão (10%)', formatarMoeda(viagem.comissao || 0)],
+    ['Total Líquido', formatarMoeda(viagem.total_liquido || 0)]
+  ];
+  
+  const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute('download', `viagem_${viagem.id_viagem || 'detalhes'}_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const DetalhesViagem = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -218,9 +310,19 @@ const DetalhesViagem = () => {
       
       <Content>
         <PageTitle>
-          <FaArrowLeft onClick={() => navigate(-1)} />
+          <FaArrowLeft className="back-button-print" onClick={() => navigate(-1)} />
           Detalhes da Viagem
         </PageTitle>
+
+        {/* Ações */}  
+        <div className="action-buttons-top" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginBottom: '20px' }}>
+          <Button outline small onClick={exportarCSV}>
+            <FaDownload /> Baixar CSV
+          </Button>
+          <Button outline small onClick={imprimir}>
+            <FaPrint /> Imprimir
+          </Button>
+        </div>
 
         {/* Resumo Financeiro */}
         <FormSection>
@@ -300,7 +402,7 @@ const DetalhesViagem = () => {
                   <tr key={index}>
                     <td>{formatarData(item.data)}</td>
                     <td>{item.litros} L</td>
-                    <td>{formatarMoeda(item.valor_litro)}</td>
+                    <td>{formatarMoeda(item.valor_litro ?? item.valor_litros)}</td>
                     <td>{formatarMoeda(item.total)}</td>
                   </tr>
                 ))}
@@ -359,9 +461,11 @@ const DetalhesViagem = () => {
           </FormSection>
         )}
 
-        <Button onClick={() => navigate('/pesquisar-viagens')}>
-          Voltar para Pesquisar
-        </Button>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+          <Button onClick={() => navigate('/pesquisar-viagens')}>
+            Voltar para Pesquisar
+          </Button>
+        </div>
       </Content>
     </Container>
   );

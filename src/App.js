@@ -12,6 +12,7 @@ import { Home } from './pages/Home';
 import { NovaViagem } from './pages/NovaViagem';
 import PesquisarViagens from './pages/PesquisarViagens';
 import DetalhesViagem from './pages/DetalhesViagem';
+import EditarViagem from './pages/EditarViagem';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -52,7 +53,19 @@ function AppRoutes() {
             <PesquisarViagens />
           </PrivateRoute>
         } 
+
+        
       />
+
+      
+      <Route 
+  path="/viagem/editar/:id" 
+  element={
+    <PrivateRoute>
+      <EditarViagem />
+    </PrivateRoute>
+  } 
+/>
       <Route 
         path="/viagem/:id" 
         element={
