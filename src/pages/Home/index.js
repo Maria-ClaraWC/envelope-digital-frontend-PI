@@ -203,11 +203,13 @@ export const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [viagens, setViagens] = useState([]);
+  const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalViagens: 0, totalRecebido: 0, mediaViagem: 0 });
 
   useEffect(() => {
     carregarViagens();
+    carregarRascunhos();
   }, []);
 
   const carregarViagens = async () => {
@@ -239,6 +241,18 @@ export const Home = () => {
 
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
+  };
+
+  const carregarRascunhos = () => {
+    try {
+      const saved = localStorage.getItem('viagemDrafts');
+      const draftsObj = saved ? JSON.parse(saved) : {};
+      const draftList = Object.values(draftsObj);
+      setDrafts(draftList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)));
+    } catch (error) {
+      console.error('Erro ao carregar rascunhos:', error);
+      setDrafts([]);
+    }
   };
 
   // Ações disponíveis (removido o "Meus Resultados")
@@ -308,6 +322,36 @@ export const Home = () => {
         </ActionGrid>
 
         <RecentSection>
+          <SectionHeader>
+            <h2>
+              <FaHistory /> Viagens a editar
+            </h2>
+          </SectionHeader>
+
+          {drafts.length === 0 ? (
+            <EmptyState>
+              <FaTruck />
+              <p>Nenhum rascunho salvo ainda.</p>
+              <Button small onClick={() => navigate('/pesquisar-viagens')}>
+                Ver viagens existentes
+              </Button>
+            </EmptyState>
+          ) : (
+            <ViagemList>
+              {drafts.map(draft => (
+                <ViagemItem key={draft.id} onClick={() => navigate(`/viagem/editar/${draft.id}`)}>
+                  <ViagemInfo>
+                    <h4>{draft.cidadeSaida || 'Origem'} → {draft.cidadeChegada || 'Destino'}</h4>
+                    <p>📅 {draft.dataInicio ? formatarData(draft.dataInicio) : 'Sem data'}</p>
+                  </ViagemInfo>
+                  <ViagemValue>{formatarMoeda(draft.totalLiquido)}</ViagemValue>
+                </ViagemItem>
+              ))}
+            </ViagemList>
+          )}
+        </RecentSection>
+
+        <RecentSection style={{ marginTop: '3rem' }}>
           <SectionHeader>
             <h2>
               <FaHistory /> Últimas Viagens

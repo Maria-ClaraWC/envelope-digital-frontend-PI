@@ -305,6 +305,32 @@ const EditarViagem = () => {
   const carregarViagem = async () => {
     setLoading(true);
     try {
+      const drafts = getDraftsFromStorage();
+      if (drafts[id]) {
+        const draft = drafts[id];
+        setFormData(draft.formData || {
+          dataInicio: '',
+          dataFim: '',
+          kmSaida: '',
+          kmChegada: '',
+          cidadeSaida: null,
+          cidadeChegada: null,
+          pesoSaida: '',
+          pesoChegada: '',
+          precoTonelada: ''
+        });
+        setAbastecimentos(draft.abastecimentos || []);
+        setOficinas(draft.oficinas || []);
+        setPedagios(draft.pedagios || []);
+        setGorjetas(draft.gorjetas || []);
+        setFaltaMercadoria(draft.faltaMercadoria || 'nao');
+        setKilosFalta(draft.kilosFalta || '');
+        setPrecoFalta(draft.precoFalta || '');
+        setSuccess('Rascunho carregado localmente.');
+        setLoading(false);
+        return;
+      }
+
       const response = await api.get(`/viagens/${id}`);
       const viagem = response.data;
       
@@ -336,6 +362,38 @@ const EditarViagem = () => {
         setFaltaMercadoria('sim');
         setKilosFalta(viagem.faltaMercadoria.kilos_falta || '');
         setPrecoFalta(viagem.faltaMercadoria.preco_falta || '');
+      }
+
+      const savedDrafts = getDraftsFromStorage();
+      if (savedDrafts[id]) {
+        const draft = savedDrafts[id];
+        setFormData(draft.formData || {
+          dataInicio: viagem.data_entrada?.split('T')[0] || '',
+          dataFim: viagem.data_chegada?.split('T')[0] || '',
+          kmSaida: viagem.km_saida || '',
+          kmChegada: viagem.km_entrada || '',
+          cidadeSaida: viagem.cidade_saida ? {
+            cidade: viagem.cidade_saida,
+            estado_sigla: viagem.estado_saida
+          } : null,
+          cidadeChegada: viagem.cidade_chegada ? {
+            cidade: viagem.cidade_chegada,
+            estado_sigla: viagem.estado_chegada
+          } : null,
+          pesoSaida: viagem.peso_saida || '',
+          pesoChegada: viagem.peso_chegada || '',
+          precoTonelada: viagem.preco_tonelada || '',
+        });
+        setAbastecimentos(draft.abastecimentos || viagem.abastecimentos || []);
+        setOficinas(draft.oficinas || viagem.oficinas || []);
+        setPedagios(draft.pedagios || viagem.pedagios || []);
+        setGorjetas(draft.gorjetas || viagem.gorjetas || []);
+        if (draft.faltaMercadoria === 'sim') {
+          setFaltaMercadoria('sim');
+          setKilosFalta(draft.kilosFalta || '');
+          setPrecoFalta(draft.precoFalta || '');
+        }
+        setSuccess('Rascunho carregado automaticamente.');
       }
       
     } catch (error) {
@@ -435,6 +493,76 @@ const EditarViagem = () => {
   const comissao = precoTotal * 0.1;
   const totalLiquido = precoTotal - totalGastos - comissao;
   
+  const getDraftsFromStorage = () => {
+    try {
+      const saved = localStorage.getItem('viagemDrafts');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Erro ao ler rascunhos:', error);
+      return {};
+    }
+  };
+
+  const saveDraftToStorage = (draftId, draftData) => {
+    try {
+      const drafts = getDraftsFromStorage();
+      const updatedDrafts = {
+        ...drafts,
+        [draftId]: {
+          id: draftId,
+          updatedAt: Date.now(),
+          cidadeSaida: draftData.formData?.cidadeSaida?.cidade || '',
+          cidadeChegada: draftData.formData?.cidadeChegada?.cidade || '',
+          dataInicio: draftData.formData?.dataInicio || '',
+          totalLiquido: draftData.totalLiquido || 0,
+          formData: draftData.formData,
+          abastecimentos: draftData.abastecimentos,
+          oficinas: draftData.oficinas,
+          pedagios: draftData.pedagios,
+          gorjetas: draftData.gorjetas,
+          faltaMercadoria: draftData.faltaMercadoria,
+          kilosFalta: draftData.kilosFalta,
+          precoFalta: draftData.precoFalta
+        }
+      };
+      localStorage.setItem('viagemDrafts', JSON.stringify(updatedDrafts));
+    } catch (error) {
+      console.error('Erro ao salvar rascunho:', error);
+    }
+  };
+
+  const removeDraftFromStorage = (draftId) => {
+    try {
+      const drafts = getDraftsFromStorage();
+      if (drafts[draftId]) {
+        delete drafts[draftId];
+        localStorage.setItem('viagemDrafts', JSON.stringify(drafts));
+      }
+    } catch (error) {
+      console.error('Erro ao remover rascunho:', error);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    setError('');
+    setSuccess('');
+
+    const draftData = {
+      formData,
+      abastecimentos,
+      oficinas,
+      pedagios,
+      gorjetas,
+      faltaMercadoria,
+      kilosFalta,
+      precoFalta,
+      totalLiquido
+    };
+
+    saveDraftToStorage(id, draftData);
+    setSuccess('✅ Rascunho salvo com sucesso!');
+  };
+
   const handleSubmit = async () => {
     setError('');
     setSuccess('');
@@ -467,6 +595,7 @@ const EditarViagem = () => {
       const response = await api.put(`/viagens/${id}`, viagemData);
       
       if (response.status === 200 || response.status === 201) {
+        removeDraftFromStorage(id);
         setSuccess('✅ Viagem atualizada com sucesso!');
         setTimeout(() => {
           navigate(`/viagem/${id}`);
@@ -901,6 +1030,9 @@ const EditarViagem = () => {
         <ButtonGroup>
           <Button outline onClick={() => navigate(`/viagem/${id}`)}>
             <FaTimes /> Cancelar
+          </Button>
+          <Button outline onClick={handleSaveDraft}>
+            <FaSave /> Salvar Rascunho
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
             <FaSave /> {saving ? 'Salvando...' : 'Salvar Alterações'}

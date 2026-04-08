@@ -52,6 +52,22 @@ const StyledLink = styled(Link)`
   }
 `;
 
+const PasswordToggle = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.primary};
+  cursor: pointer;
+  align-self: flex-end;
+  font-size: ${props => props.theme.fontSizes.small};
+  margin-top: -${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const ErrorMessage = styled.div`
   color: ${props => props.theme.colors.error};
   text-align: center;
@@ -63,6 +79,7 @@ export const Login = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -98,13 +115,16 @@ export const Login = () => {
 
           <Input
             label="Senha"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="Digite sua senha"
             {...register('senha', { 
               required: 'Campo obrigatório'
             })}
             error={errors.senha?.message}
           />
+          <PasswordToggle type="button" onClick={() => setShowPassword(prev => !prev)}>
+            {showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          </PasswordToggle>
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
 

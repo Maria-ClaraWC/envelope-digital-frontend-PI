@@ -264,6 +264,7 @@ export const NovaViagem = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [draftId, setDraftId] = useState(null);
   
   const [formData, setFormData] = useState({
     dataInicio: new Date().toISOString().split('T')[0],
@@ -320,6 +321,72 @@ export const NovaViagem = () => {
   
   const handleCidadeChegadaSelect = (city) => {
     setFormData(prev => ({ ...prev, cidadeChegada: city }));
+  };
+
+  const getDraftsFromStorage = () => {
+    try {
+      const saved = localStorage.getItem('viagemDrafts');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Erro ao ler rascunhos:', error);
+      return {};
+    }
+  };
+
+  const saveDraftToStorage = (id, draftData) => {
+    try {
+      const drafts = getDraftsFromStorage();
+      const updatedDrafts = {
+        ...drafts,
+        [id]: {
+          id,
+          updatedAt: Date.now(),
+          cidadeSaida: draftData.formData?.cidadeSaida?.cidade || '',
+          cidadeChegada: draftData.formData?.cidadeChegada?.cidade || '',
+          dataInicio: draftData.formData?.dataInicio || '',
+          totalLiquido: draftData.totalLiquido || 0,
+          ...draftData
+        }
+      };
+      localStorage.setItem('viagemDrafts', JSON.stringify(updatedDrafts));
+    } catch (error) {
+      console.error('Erro ao salvar rascunho:', error);
+    }
+  };
+
+  const removeDraftFromStorage = (id) => {
+    try {
+      const drafts = getDraftsFromStorage();
+      if (drafts[id]) {
+        delete drafts[id];
+        localStorage.setItem('viagemDrafts', JSON.stringify(drafts));
+      }
+    } catch (error) {
+      console.error('Erro ao remover rascunho:', error);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    setError('');
+    setSuccess('');
+
+    const newDraftId = draftId || `draft-${Date.now()}`;
+    setDraftId(newDraftId);
+
+    const draftData = {
+      formData,
+      abastecimentos,
+      oficinas,
+      pedagios,
+      gorjetas,
+      faltaMercadoria,
+      kilosFalta,
+      precoFalta,
+      totalLiquido
+    };
+
+    saveDraftToStorage(newDraftId, draftData);
+    setSuccess('✅ Rascunho salvo com sucesso!');
   };
   
   const handleAddAbastecimento = () => {
@@ -487,6 +554,11 @@ export const NovaViagem = () => {
       
       // Verificar se a resposta indica sucesso
       if (response.status === 201 || response.status === 200) {
+        if (draftId) {
+          removeDraftFromStorage(draftId);
+          setDraftId(null);
+        }
+
         // Exibir mensagem de sucesso
         const successMessage = response.data.message || '✅ Viagem salva com sucesso!';
         setSuccess(successMessage);
@@ -929,8 +1001,11 @@ export const NovaViagem = () => {
           <Button outline onClick={() => navigate('/home')}>
             <FaTimes /> Cancelar
           </Button>
+          <Button outline onClick={handleSaveDraft}>
+            <FaSave /> Salvar Rascunho
+          </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            <FaSave /> {loading ? 'Salvando...' : 'Salvar Viagem'}
+            <FaSave /> {loading ? 'Finalizando...' : 'Finalizar Viagem'}
           </Button>
         </ButtonGroup>
       </Content>
