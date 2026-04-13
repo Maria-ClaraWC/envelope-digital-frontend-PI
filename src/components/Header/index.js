@@ -139,7 +139,8 @@ export const Header = () => {
   
   const handleLogout = () => {
     logout();
-    window.location.href = 'http://localhost:3000/';
+    setShowLogoutMenu(false);
+    window.location.href = '/';
   };
   
   // Fechar menu quando clicar fora
